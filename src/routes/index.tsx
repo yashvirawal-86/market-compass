@@ -3,9 +3,25 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Calendar, Newspaper,
-  Rocket, GraduationCap, Globe2, Brain, Mail, Twitter, Youtube, Linkedin, Instagram,
+  Rocket, GraduationCap, Globe2, Brain, Mail, Youtube, Linkedin, Instagram,
   ShieldCheck, Zap, DollarSign, IndianRupee, ChevronRight, Play, LayoutDashboard, Building2,
 } from "lucide-react";
+
+/* ---------- Owner + external link helpers ---------- */
+const OWNER = {
+  name: "Yashvi Rawal",
+  email: "yashvirawal86@gmail.com",
+  linkedin: "https://www.linkedin.com/in/yashvi-rawal",
+  youtube: "https://www.youtube.com/@Yashvi-Rawal",
+  instagram: "https://www.instagram.com/",
+  site: "www.yr.stockvverse.com",
+};
+const yahooQuote = (ticker: string) =>
+  `https://finance.yahoo.com/quote/${encodeURIComponent(ticker.replace(/\./g, "-"))}`;
+const googleNews = (q: string) =>
+  `https://www.google.com/search?tbm=nws&q=${encodeURIComponent(q)}`;
+const investopedia = (q: string) =>
+  `https://www.investopedia.com/search?q=${encodeURIComponent(q)}`;
 import { Sparkline, fmt } from "@/components/sparkline";
 import {
   MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, IPOS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
