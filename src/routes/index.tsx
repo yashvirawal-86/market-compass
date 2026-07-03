@@ -98,97 +98,14 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
 
           <button
             onClick={() => (window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent("StockVerse AI — Login access request")}`)}
-            className="h-9 px-4 rounded-xl glass hover:border-[color:var(--cyan)]/40 text-sm font-semibold transition shrink-0">
+            className="h-9 px-4 rounded-xl gradient-brand text-[color:var(--midnight)] text-sm font-semibold hover:opacity-90 transition shrink-0">
             Login
           </button>
-
-          <SignUpButton />
         </div>
       </div>
     </header>
   );
 }
-
-/* ---------- Sign Up ---------- */
-function SignUpButton() {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", purpose: "" });
-  const [sent, setSent] = useState(false);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const subject = `New StockVerse AI Sign Up — ${form.name}`;
-    const body = [
-      `A new visitor just signed up on StockVerse AI:`,
-      ``,
-      `Name:      ${form.name}`,
-      `Email:     ${form.email}`,
-      `Contact:   ${form.phone}`,
-      `Purpose:   ${form.purpose}`,
-      ``,
-      `Date:      ${new Date().toLocaleString()}`,
-      `Site:      ${OWNER.site}`,
-    ].join("\n");
-    window.location.href =
-      `mailto:${OWNER.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setSent(true);
-    setTimeout(() => { setOpen(false); setSent(false); setForm({ name: "", email: "", phone: "", purpose: "" }); }, 1200);
-  };
-
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="h-9 px-4 rounded-xl gradient-brand text-[color:var(--midnight)] text-sm font-semibold hover:opacity-90 transition shrink-0">
-        Sign Up
-      </button>
-      {open && (
-        <div className="fixed inset-0 z-[100] grid place-items-center p-4 bg-[color:var(--midnight)]/70 backdrop-blur-sm animate-in fade-in"
-             onClick={() => setOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()}
-               className="glass-strong rounded-2xl w-full max-w-md p-6 sm:p-8 relative">
-            <button aria-label="Close" onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 transition text-muted-foreground">✕</button>
-            <div className="mb-5">
-              <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Join StockVerse AI</div>
-              <h3 className="text-2xl font-bold leading-tight">Create your <span className="gradient-text">free account</span></h3>
-              <p className="text-sm text-muted-foreground mt-1">Tell us a bit about yourself — we'll get you set up.</p>
-            </div>
-            <form onSubmit={submit} className="space-y-3">
-              <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Jane Doe" required />
-              <Field label="Email address" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@email.com" required />
-              <Field label="Contact number" type="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" required />
-              <div>
-                <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">Purpose of visit</label>
-                <textarea required rows={3} value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-                  placeholder="e.g. learning about the stock market, tracking my portfolio, researching companies…"
-                  className="mt-1 w-full px-3 py-2 rounded-xl glass bg-transparent border border-white/10 focus:border-[color:var(--cyan)]/50 outline-none text-sm resize-none" />
-              </div>
-              <button type="submit"
-                className="w-full h-11 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
-                {sent ? "✓ Submitted" : "Create Account"}
-              </button>
-              <p className="text-[11px] text-muted-foreground text-center">By signing up you agree to our educational-use disclaimer.</p>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-function Field({ label, value, onChange, type = "text", placeholder, required }:
-  { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean }) {
-  return (
-    <div>
-      <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">{label}</label>
-      <input type={type} required={required} placeholder={placeholder} value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full h-11 px-3 rounded-xl glass bg-transparent border border-white/10 focus:border-[color:var(--cyan)]/50 outline-none text-sm" />
-    </div>
-  );
-}
-
 
 /* ---------- Hero ---------- */
 function Hero() {
