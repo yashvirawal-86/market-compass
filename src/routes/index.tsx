@@ -847,9 +847,10 @@ function Education() {
             </div>
             <h3 className="font-semibold mb-1.5">{i.title}</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-4">{i.desc}</p>
-            <button className="text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+            <a href={investopedia(i.title)} target="_blank" rel="noreferrer noopener"
+               className="text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 group-hover:gap-2 transition-all">
               Learn more <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
+            </a>
           </div>
         ))}
       </div>
