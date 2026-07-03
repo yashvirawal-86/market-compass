@@ -462,9 +462,10 @@ function CompanyProfile() {
             </div>
           </div>
 
-          <button className="inline-flex items-center gap-2 h-11 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
+          <a href={yahooQuote(active.ticker)} target="_blank" rel="noreferrer noopener"
+             className="inline-flex items-center gap-2 h-11 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
             View Complete Analysis <ChevronRight className="h-4 w-4" />
-          </button>
+          </a>
         </div>
       </div>
     </section>
