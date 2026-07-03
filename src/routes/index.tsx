@@ -3,9 +3,25 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Calendar, Newspaper,
-  Rocket, GraduationCap, Globe2, Brain, Mail, Twitter, Youtube, Linkedin, Instagram,
+  Rocket, GraduationCap, Globe2, Brain, Mail, Youtube, Linkedin, Instagram,
   ShieldCheck, Zap, DollarSign, IndianRupee, ChevronRight, Play, LayoutDashboard, Building2,
 } from "lucide-react";
+
+/* ---------- Owner + external link helpers ---------- */
+const OWNER = {
+  name: "Yashvi Rawal",
+  email: "yashvirawal86@gmail.com",
+  linkedin: "https://www.linkedin.com/in/yashvi-rawal",
+  youtube: "https://www.youtube.com/@Yashvi-Rawal",
+  instagram: "https://www.instagram.com/",
+  site: "www.yr.stockvverse.com",
+};
+const yahooQuote = (ticker: string) =>
+  `https://finance.yahoo.com/quote/${encodeURIComponent(ticker.replace(/\./g, "-"))}`;
+const googleNews = (q: string) =>
+  `https://www.google.com/search?tbm=nws&q=${encodeURIComponent(q)}`;
+const investopedia = (q: string) =>
+  `https://www.investopedia.com/search?q=${encodeURIComponent(q)}`;
 import { Sparkline, fmt } from "@/components/sparkline";
 import {
   MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, IPOS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
@@ -80,7 +96,9 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
             {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
 
-          <button className="h-9 px-4 rounded-xl gradient-brand text-[color:var(--midnight)] text-sm font-semibold hover:opacity-90 transition shrink-0">
+          <button
+            onClick={() => (window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent("StockVerse AI — Login access request")}`)}
+            className="h-9 px-4 rounded-xl gradient-brand text-[color:var(--midnight)] text-sm font-semibold hover:opacity-90 transition shrink-0">
             Login
           </button>
         </div>
@@ -444,9 +462,10 @@ function CompanyProfile() {
             </div>
           </div>
 
-          <button className="inline-flex items-center gap-2 h-11 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
+          <a href={yahooQuote(active.ticker)} target="_blank" rel="noreferrer noopener"
+             className="inline-flex items-center gap-2 h-11 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
             View Complete Analysis <ChevronRight className="h-4 w-4" />
-          </button>
+          </a>
         </div>
       </div>
     </section>
@@ -655,7 +674,7 @@ function NewsGrid() {
       <div className="flex items-end justify-between flex-wrap gap-4" id="news">
         <SectionTitle eyebrow="Market News" title={<>Latest <span className="gradient-text">Headlines</span></>}
           subtitle="Curated from trusted financial news sources — updates automatically." />
-        <a href="#" className="text-sm text-[color:var(--cyan)] hover:underline">View all →</a>
+        <a href="https://finance.yahoo.com/news/" target="_blank" rel="noreferrer noopener" className="text-sm text-[color:var(--cyan)] hover:underline">View all →</a>
       </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {NEWS.map((n, i) => (
@@ -672,9 +691,10 @@ function NewsGrid() {
               </div>
               <h3 className="font-semibold leading-snug mb-2 group-hover:text-[color:var(--cyan)] transition">{n.title}</h3>
               <p className="text-sm text-muted-foreground line-clamp-2">{n.summary}</p>
-              <button className="mt-4 text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 hover:gap-2 transition-all">
+              <a href={googleNews(n.title)} target="_blank" rel="noreferrer noopener"
+                 className="mt-4 text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 hover:gap-2 transition-all">
                 Read more <ArrowUpRight className="h-3.5 w-3.5" />
-              </button>
+              </a>
             </div>
           </article>
         ))}
@@ -827,9 +847,10 @@ function Education() {
             </div>
             <h3 className="font-semibold mb-1.5">{i.title}</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-4">{i.desc}</p>
-            <button className="text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+            <a href={investopedia(i.title)} target="_blank" rel="noreferrer noopener"
+               className="text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 group-hover:gap-2 transition-all">
               Learn more <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
+            </a>
           </div>
         ))}
       </div>
@@ -964,6 +985,66 @@ function Mood({ label, value, tone }: { label: string; value: string; tone: "up"
 function Newsletter() {
   const [email, setEmail] = useState("");
   const [ok, setOk] = useState(false);
+
+  const buildNewsletter = (to: string) => {
+    const subject = `Welcome to StockVerse AI — Your Daily Market Brief`;
+    const body = [
+      `Hi there,`,
+      ``,
+      `Thanks for subscribing to StockVerse AI — you're in!`,
+      ``,
+      `Here's a preview of what lands in your inbox every morning:`,
+      ``,
+      `📈 MARKETS TODAY`,
+      `• NIFTY 50: 24,856 (+0.58%)   • SENSEX: 81,532 (-0.27%)`,
+      `• NASDAQ: 20,114 (+0.94%)     • S&P 500: 5,824 (+0.55%)`,
+      `• Gold: $2,687/oz (+0.54%)    • Crude (WTI): $71.32 (+1.25%)`,
+      ``,
+      `🔥 TOP MOVERS`,
+      `• NVIDIA extends gains on strong Blackwell demand.`,
+      `• Indian IT firms raise FY26 guidance on BFSI deal revival.`,
+      `• Metals under pressure on China demand concerns.`,
+      ``,
+      `🧠 AI MARKET MOOD`,
+      `Cautiously bullish. Breadth positive (62% advancers), VIX low at 14.2.`,
+      `Watch: US CPI print next week + RBI commentary on food inflation.`,
+      ``,
+      `📚 LEARN TODAY`,
+      `"Fundamental vs Technical Analysis — which one should a beginner start with?"`,
+      `Read on the site: https://${OWNER.site}/#learn`,
+      ``,
+      `— ${OWNER.name}`,
+      `Founder, StockVerse AI`,
+      `${OWNER.email} • ${OWNER.linkedin} • ${OWNER.youtube}`,
+      ``,
+      `Educational content only. Not investment advice.`,
+      `You're subscribed as: ${to}`,
+    ].join("\n");
+    return { subject, body };
+  };
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.includes("@")) return;
+    const { subject, body } = buildNewsletter(email);
+    // 1) Notify owner of the new subscriber
+    const notify =
+      `mailto:${OWNER.email}` +
+      `?subject=${encodeURIComponent("New StockVerse AI subscriber")}` +
+      `&body=${encodeURIComponent(`New subscriber: ${email}\nSite: ${OWNER.site}\nDate: ${new Date().toLocaleString()}`)}`;
+    // 2) Compose the welcome newsletter to the subscriber
+    const welcome =
+      `mailto:${email}` +
+      `?cc=${OWNER.email}` +
+      `&subject=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body)}`;
+    // Open owner notification in background, welcome in foreground
+    try { window.open(notify, "_blank"); } catch {}
+    window.location.href = welcome;
+    setOk(true);
+    setEmail("");
+  };
+
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6" id="about">
       <div className="relative overflow-hidden rounded-3xl p-10 sm:p-14 text-center gradient-brand text-[color:var(--midnight)]">
@@ -974,13 +1055,12 @@ function Newsletter() {
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold">Markets in your inbox, every morning.</h2>
           <p className="mt-3 text-[color:var(--midnight)]/80">Daily updates, weekly deep dives, and beginner-friendly education — free, always.</p>
-          <form onSubmit={(e) => { e.preventDefault(); if (email.includes("@")) { setOk(true); setEmail(""); } }}
-            className="mt-6 flex flex-col sm:flex-row gap-2 max-w-lg mx-auto">
+          <form onSubmit={onSubmit} className="mt-6 flex flex-col sm:flex-row gap-2 max-w-lg mx-auto">
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required placeholder="you@email.com"
               className="flex-1 h-12 px-4 rounded-xl bg-[color:var(--midnight)]/10 border border-[color:var(--midnight)]/20 placeholder:text-[color:var(--midnight)]/50 outline-none focus:border-[color:var(--midnight)]/60" />
-            <button className="h-12 px-6 rounded-xl bg-[color:var(--midnight)] text-white font-semibold hover:opacity-90 transition">Subscribe</button>
+            <button type="submit" className="h-12 px-6 rounded-xl bg-[color:var(--midnight)] text-white font-semibold hover:opacity-90 transition">Subscribe</button>
           </form>
-          {ok && <div className="mt-3 text-sm">✓ You're on the list.</div>}
+          {ok && <div className="mt-3 text-sm">✓ You're on the list — check your mail app for your welcome brief.</div>}
         </div>
       </div>
     </section>
@@ -1007,12 +1087,29 @@ function Footer() {
           <div>
             <div className="text-sm font-semibold mb-4">About the Website Owner</div>
             <ul className="text-sm text-white/70 space-y-2">
-              <li>Name: <span className="text-white/50">______________</span></li>
-              <li>Email: <span className="text-white/50">______________</span></li>
-              <li className="flex items-center gap-1.5"><Linkedin className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
-              <li className="flex items-center gap-1.5"><Youtube className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
-              <li className="flex items-center gap-1.5"><Instagram className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
-              <li className="flex items-center gap-1.5"><Twitter className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
+              <li>Name: <span className="text-white">{OWNER.name}</span></li>
+              <li>
+                Email:{" "}
+                <a href={`mailto:${OWNER.email}`} className="text-white hover:text-[color:var(--cyan)] transition break-all">
+                  {OWNER.email}
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Linkedin className="h-3.5 w-3.5 shrink-0" />
+                <a href={OWNER.linkedin} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition break-all">
+                  linkedin.com/in/yashvi-rawal
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Youtube className="h-3.5 w-3.5 shrink-0" />
+                <a href={OWNER.youtube} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition break-all">
+                  youtube.com/@Yashvi-Rawal
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Globe2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="text-white break-all">{OWNER.site}</span>
+              </li>
             </ul>
           </div>
         </div>
