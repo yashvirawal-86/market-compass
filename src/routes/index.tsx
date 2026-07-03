@@ -96,7 +96,9 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
             {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
 
-          <button className="h-9 px-4 rounded-xl gradient-brand text-[color:var(--midnight)] text-sm font-semibold hover:opacity-90 transition shrink-0">
+          <button
+            onClick={() => (window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent("StockVerse AI — Login access request")}`)}
+            className="h-9 px-4 rounded-xl gradient-brand text-[color:var(--midnight)] text-sm font-semibold hover:opacity-90 transition shrink-0">
             Login
           </button>
         </div>
