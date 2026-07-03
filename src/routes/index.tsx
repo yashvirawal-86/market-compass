@@ -674,7 +674,7 @@ function NewsGrid() {
       <div className="flex items-end justify-between flex-wrap gap-4" id="news">
         <SectionTitle eyebrow="Market News" title={<>Latest <span className="gradient-text">Headlines</span></>}
           subtitle="Curated from trusted financial news sources — updates automatically." />
-        <a href="#" className="text-sm text-[color:var(--cyan)] hover:underline">View all →</a>
+        <a href="https://finance.yahoo.com/news/" target="_blank" rel="noreferrer noopener" className="text-sm text-[color:var(--cyan)] hover:underline">View all →</a>
       </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {NEWS.map((n, i) => (
