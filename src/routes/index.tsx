@@ -1,24 +1,1080 @@
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import {
+  Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
+  Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Calendar, Newspaper,
+  Rocket, GraduationCap, Globe2, Brain, Mail, Twitter, Youtube, Linkedin, Instagram,
+  ShieldCheck, Zap, DollarSign, IndianRupee, ChevronRight, Play, LayoutDashboard, Building2,
+} from "lucide-react";
+import { Sparkline, fmt } from "@/components/sparkline";
+import {
+  MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, IPOS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
+} from "@/lib/market-data";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  component: Home,
+  head: () => ({
+    meta: [
+      { title: "StockVerse AI — Real-Time Stock Market Intelligence" },
+      { name: "description", content: "Live markets, company insights, financial ratios, IPOs, and AI-generated market summaries — for education only." },
+      { property: "og:title", content: "StockVerse AI" },
+      { property: "og:description", content: "Real-time stock market intelligence for smarter learning." },
+      { property: "og:url", content: "/" },
+    ],
+    links: [{ rel: "canonical", href: "/" }],
+  }),
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+/* ---------- Theme toggle ---------- */
+function useTheme() {
+  const [light, setLight] = useState(false);
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", light);
+  }, [light]);
+  return { light, toggle: () => setLight((x) => !x) };
+}
+
+/* ---------- Header ---------- */
+function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
+  const nav = ["Home", "Markets", "Companies", "News", "About"];
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const on = () => setScrolled(window.scrollY > 20);
+    on(); window.addEventListener("scroll", on);
+    return () => window.removeEventListener("scroll", on);
+  }, []);
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <header className={`fixed top-0 inset-x-0 z-50 transition-all ${scrolled ? "py-2" : "py-4"}`}>
+      <div className={`mx-auto max-w-7xl px-4 sm:px-6 transition-all`}>
+        <div className={`glass-strong rounded-2xl px-3 sm:px-5 py-2.5 flex items-center gap-3 ${scrolled ? "glow-cyan" : ""}`}>
+          <a href="#home" className="flex items-center gap-2 shrink-0">
+            <div className="relative h-9 w-9 rounded-xl gradient-brand grid place-items-center glow-cyan">
+              <Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} />
+            </div>
+            <div className="hidden sm:block leading-tight">
+              <div className="font-display font-bold text-[15px] tracking-tight">StockVerse<span className="gradient-text"> AI</span></div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Market Intelligence</div>
+            </div>
+          </a>
+
+          <nav className="hidden lg:flex items-center gap-1 ml-4">
+            {nav.map((n) => (
+              <a key={n} href={`#${n.toLowerCase()}`}
+                 className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition">
+                {n}
+              </a>
+            ))}
+          </nav>
+
+          <div className="flex-1" />
+
+          <div className="hidden md:flex items-center gap-2 glass rounded-xl px-3 py-1.5 min-w-0 max-w-xs">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input placeholder="Search stocks, indices, news…"
+                   className="bg-transparent outline-none text-sm min-w-0 flex-1 placeholder:text-muted-foreground/70" />
+            <kbd className="hidden xl:inline text-[10px] text-muted-foreground border border-white/10 rounded px-1.5 py-0.5">⌘K</kbd>
+          </div>
+
+          <button onClick={toggle} aria-label="Toggle theme"
+            className="h-9 w-9 grid place-items-center rounded-xl glass hover:border-[color:var(--cyan)]/40 transition">
+            {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </button>
+
+          <button className="h-9 px-4 rounded-xl gradient-brand text-[color:var(--midnight)] text-sm font-semibold hover:opacity-90 transition shrink-0">
+            Login
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ---------- Hero ---------- */
+function Hero() {
+  const tickers = [...MARKET_INDICES, ...MARKET_INDICES];
+  return (
+    <section id="home" className="relative pt-32 pb-20 overflow-hidden">
+      <div className="absolute inset-0 animate-grid opacity-30 pointer-events-none" />
+      <div className="absolute -top-20 -right-20 h-96 w-96 rounded-full bg-[color:var(--cyan)]/20 blur-[120px] pointer-events-none" />
+      <div className="absolute top-40 -left-20 h-96 w-96 rounded-full bg-[color:var(--aqua)]/15 blur-[120px] pointer-events-none" />
+
+      {/* Floating candlesticks */}
+      <div className="absolute inset-0 pointer-events-none">
+        {[
+          { l: "12%", t: "22%", d: "0s" },
+          { l: "82%", t: "28%", d: "1.5s" },
+          { l: "18%", t: "70%", d: "3s" },
+          { l: "88%", t: "68%", d: "2s" },
+        ].map((p, i) => (
+          <div key={i} className="animate-float absolute opacity-40" style={{ left: p.l, top: p.t, animationDelay: p.d }}>
+            <CandlestickChart className="h-10 w-10 text-[color:var(--cyan)]" />
+          </div>
+        ))}
+      </div>
+
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="grid lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 text-xs text-muted-foreground mb-6">
+              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--gain)] animate-pulse-glow" />
+              Live Market Data • Educational Platform
+            </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05]">
+              Real-Time Stock Market{" "}
+              <span className="gradient-text">Intelligence</span> for Smarter Learning
+            </h1>
+            <p className="mt-6 text-lg text-muted-foreground max-w-xl">
+              Track live markets, discover company insights, analyze financial data, and stay updated with breaking market news — all in one place.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a href="#markets" className="group inline-flex items-center gap-2 h-12 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition glow-cyan">
+                Explore Markets <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" />
+              </a>
+              <a href="#dashboard" className="inline-flex items-center gap-2 h-12 px-5 rounded-xl glass hover:border-[color:var(--cyan)]/40 transition font-medium">
+                <LayoutDashboard className="h-4 w-4" /> Live Dashboard
+              </a>
+            </div>
+
+            <div className="mt-10 grid grid-cols-3 gap-3 max-w-md">
+              {[
+                { k: "10K+", v: "Instruments" },
+                { k: "25+", v: "Global Markets" },
+                { k: "Live", v: "Data Refresh" },
+              ].map((s) => (
+                <div key={s.v} className="glass rounded-xl px-4 py-3">
+                  <div className="text-lg sm:text-xl font-bold gradient-text">{s.k}</div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{s.v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Hero chart card */}
+          <div className="relative">
+            <div className="glass-strong rounded-3xl p-5 hover-lift">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest">NIFTY 50</div>
+                  <div className="flex items-baseline gap-2">
+                    <div className="font-mono text-2xl font-bold">24,856.30</div>
+                    <div className="text-sm font-semibold text-[color:var(--gain)] flex items-center gap-0.5">
+                      <TrendingUp className="h-3.5 w-3.5" /> +0.58%
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  {["1D", "1W", "1M", "1Y"].map((r, i) => (
+                    <button key={r} className={`px-2.5 py-1 text-xs rounded-md ${i === 2 ? "bg-[color:var(--cyan)]/20 text-[color:var(--cyan)]" : "text-muted-foreground hover:bg-white/5"}`}>{r}</button>
+                  ))}
+                </div>
+              </div>
+              <HeroChart />
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                {[
+                  { k: "Open", v: "24,714" },
+                  { k: "High", v: "24,912" },
+                  { k: "Low", v: "24,689" },
+                ].map((x) => (
+                  <div key={x.k} className="glass rounded-lg py-2">
+                    <div className="text-[10px] uppercase text-muted-foreground">{x.k}</div>
+                    <div className="font-mono text-sm">{x.v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="absolute -bottom-4 -right-4 glass-strong rounded-2xl p-3 hidden sm:flex items-center gap-2 glow-cyan animate-float">
+              <Sparkles className="h-4 w-4 text-[color:var(--aqua)]" />
+              <span className="text-xs">AI Analysis Active</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ticker */}
+      <div className="mt-16 relative overflow-hidden border-y border-white/10 py-3 glass">
+        <div className="flex gap-8 animate-ticker whitespace-nowrap">
+          {tickers.map((t, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm">
+              <span className="font-semibold">{t.name}</span>
+              <span className="font-mono">{fmt(t.price)}</span>
+              <span className={`font-mono text-xs ${t.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
+                {t.change >= 0 ? "▲" : "▼"} {fmt(Math.abs(t.changePct))}%
+              </span>
+              <span className="text-muted-foreground">•</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HeroChart() {
+  const pts = useMemo(() => {
+    const arr: number[] = [];
+    let v = 100;
+    for (let i = 0; i < 60; i++) { v = v * (1 + (Math.random() - 0.48) * 0.02); arr.push(v); }
+    return arr;
+  }, []);
+  const w = 460, h = 180;
+  const min = Math.min(...pts), max = Math.max(...pts);
+  const step = w / (pts.length - 1);
+  const line = pts.map((v, i) => `${i * step},${h - ((v - min) / (max - min)) * (h - 20) - 10}`).join(" ");
+  const area = `M0,${h} L ${line} L ${w},${h} Z`;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-40">
+      <defs>
+        <linearGradient id="heroGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="var(--cyan)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {[0.25, 0.5, 0.75].map((y) => (
+        <line key={y} x1="0" y1={h * y} x2={w} y2={h * y} stroke="currentColor" strokeOpacity="0.08" strokeDasharray="2 4" />
+      ))}
+      <path d={area} fill="url(#heroGrad)" />
+      <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
+      <circle cx={(pts.length - 1) * step} cy={h - ((pts[pts.length - 1] - min) / (max - min)) * (h - 20) - 10} r="4" fill="var(--aqua)" />
+      <circle cx={(pts.length - 1) * step} cy={h - ((pts[pts.length - 1] - min) / (max - min)) * (h - 20) - 10} r="8" fill="var(--aqua)" opacity="0.3" className="animate-pulse-glow" />
+    </svg>
+  );
+}
+
+/* ---------- Section title ---------- */
+function SectionTitle({ eyebrow, title, subtitle, id }: { eyebrow?: string; title: React.ReactNode; subtitle?: string; id?: string }) {
+  return (
+    <div id={id} className="mb-10 max-w-3xl">
+      {eyebrow && <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] mb-3 font-semibold">{eyebrow}</div>}
+      <h2 className="text-3xl sm:text-4xl font-bold leading-tight">{title}</h2>
+      {subtitle && <p className="mt-3 text-muted-foreground text-base sm:text-lg">{subtitle}</p>}
+    </div>
+  );
+}
+
+/* ---------- Live Dashboard ---------- */
+function LiveDashboard() {
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), 3500); return () => clearInterval(id); }, []);
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-10" id="dashboard">
+        <SectionTitle eyebrow="Live Dashboard" title={<>The Market at a <span className="gradient-text">Glance</span></>}
+          subtitle="Real-time snapshots of global indices, commodities, and FX. Data refreshes automatically." />
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--gain)] animate-pulse-glow" /> Auto-refresh • Sample data
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {MARKET_INDICES.map((m) => {
+          const jitter = Math.sin((tick + m.symbol.length) * 1.3) * 0.15;
+          const px = m.price * (1 + jitter * 0.001);
+          const up = m.change >= 0;
+          return (
+            <div key={m.symbol} className="group glass rounded-2xl p-4 hover-lift">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{m.symbol}</div>
+                  <div className="text-sm font-semibold">{m.name}</div>
+                </div>
+                <div className={`h-7 w-7 rounded-lg grid place-items-center ${up ? "bg-[color:var(--gain)]/10 text-[color:var(--gain)]" : "bg-[color:var(--loss)]/10 text-[color:var(--loss)]"}`}>
+                  {up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                </div>
+              </div>
+              <div className="font-mono text-lg font-bold">{fmt(px)}</div>
+              <div className={`text-xs font-medium mt-0.5 ${up ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
+                {up ? "+" : ""}{fmt(m.change)} ({up ? "+" : ""}{fmt(m.changePct)}%)
+              </div>
+              <div className="mt-2"><Sparkline data={m.spark} up={up} width={160} height={36} /></div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Trending Stocks ---------- */
+function Trending() {
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Trending Stocks" id="companies"
+        title={<>Blue-Chip <span className="gradient-text">Movers</span> Today</>}
+        subtitle="Fundamentals and sentiment at a glance across global and Indian large-caps. For information only — not investment advice." />
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {COMPANIES.slice(0, 9).map((c) => <StockCard key={c.ticker} c={c} />)}
+      </div>
+    </section>
+  );
+}
+
+function StockCard({ c }: { c: (typeof COMPANIES)[number] }) {
+  const up = c.change >= 0;
+  const recColor = c.recommendation === "Buy" ? "text-[color:var(--gain)] bg-[color:var(--gain)]/10" :
+    c.recommendation === "Sell" ? "text-[color:var(--loss)] bg-[color:var(--loss)]/10" :
+    "text-[color:var(--lavender)] bg-white/5";
+  return (
+    <div className="glass rounded-2xl p-5 hover-lift">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-11 w-11 rounded-xl grid place-items-center font-bold text-white shrink-0" style={{ background: c.color }}>{c.logo}</div>
+          <div className="min-w-0">
+            <div className="font-semibold truncate">{c.name}</div>
+            <div className="text-xs text-muted-foreground">{c.ticker} • {c.sector}</div>
+          </div>
+        </div>
+        <span className={`text-[10px] font-semibold px-2 py-1 rounded-md ${recColor}`}>{c.recommendation}</span>
+      </div>
+      <div className="flex items-baseline justify-between mb-4">
+        <div className="font-mono text-xl font-bold">{c.ticker.length > 4 ? "₹" : "$"}{fmt(c.price)}</div>
+        <div className={`text-sm font-semibold ${up ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"} flex items-center gap-0.5`}>
+          {up ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+          {up ? "+" : ""}{fmt(c.changePct)}%
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <Meta k="Market Cap" v={c.marketCap} />
+        <Meta k="P / E" v={fmt(c.pe)} />
+        <Meta k="Div. Yield" v={`${fmt(c.divYield)}%`} />
+        <Meta k="Sentiment" v={c.sentiment} tone={c.sentiment === "Bullish" ? "up" : c.sentiment === "Bearish" ? "down" : "n"} />
+        <Meta k="52W High" v={c.ticker.length > 4 ? `₹${fmt(c.high52)}` : `$${fmt(c.high52)}`} />
+        <Meta k="52W Low" v={c.ticker.length > 4 ? `₹${fmt(c.low52)}` : `$${fmt(c.low52)}`} />
+      </div>
+    </div>
+  );
+}
+
+function Meta({ k, v, tone }: { k: string; v: string; tone?: "up" | "down" | "n" }) {
+  const c = tone === "up" ? "text-[color:var(--gain)]" : tone === "down" ? "text-[color:var(--loss)]" : "";
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{k}</div>
+      <div className={`font-mono text-sm font-medium ${c}`}>{v}</div>
+    </div>
+  );
+}
+
+/* ---------- Company Profile ---------- */
+function CompanyProfile() {
+  const [q, setQ] = useState("");
+  const [active, setActive] = useState(COMPANIES[0]);
+  const filtered = COMPANIES.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()) || c.ticker.toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Company Intelligence"
+        title={<>Deep-Dive <span className="gradient-text">Profiles</span></>}
+        subtitle="Search a company to review leadership, financials, competitors, and business context." />
+      <div className="grid lg:grid-cols-[320px_1fr] gap-6">
+        <div className="glass-strong rounded-2xl p-4">
+          <div className="glass rounded-xl px-3 py-2 flex items-center gap-2 mb-3">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <input placeholder="Search companies…" value={q} onChange={(e) => setQ(e.target.value)}
+              className="bg-transparent outline-none text-sm flex-1 min-w-0" />
+          </div>
+          <div className="max-h-[520px] overflow-y-auto space-y-1 pr-1">
+            {filtered.map((c) => (
+              <button key={c.ticker} onClick={() => setActive(c)}
+                className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition ${active.ticker === c.ticker ? "bg-[color:var(--cyan)]/15 border border-[color:var(--cyan)]/30" : "hover:bg-white/5 border border-transparent"}`}>
+                <div className="h-9 w-9 rounded-lg grid place-items-center text-xs font-bold text-white shrink-0" style={{ background: c.color }}>{c.logo}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium truncate">{c.name}</div>
+                  <div className="text-[11px] text-muted-foreground">{c.ticker} • {c.sector}</div>
+                </div>
+                <div className={`text-xs font-mono ${c.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
+                  {c.change >= 0 ? "+" : ""}{fmt(c.changePct)}%
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="glass-strong rounded-2xl p-6 lg:p-8">
+          <div className="flex flex-wrap items-start gap-4 justify-between mb-6">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="h-14 w-14 rounded-2xl grid place-items-center font-bold text-white text-lg shrink-0" style={{ background: active.color }}>{active.logo}</div>
+              <div className="min-w-0">
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">{active.sector}</div>
+                <h3 className="text-2xl font-bold truncate">{active.name}</h3>
+                <div className="text-sm text-muted-foreground">{active.ticker} • Listed {active.founded}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-mono text-2xl font-bold">{active.ticker.length > 4 ? "₹" : "$"}{fmt(active.price)}</div>
+              <div className={`text-sm font-semibold ${active.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
+                {active.change >= 0 ? "+" : ""}{fmt(active.change)} ({active.change >= 0 ? "+" : ""}{fmt(active.changePct)}%)
+              </div>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-3 mb-6">
+            {[
+              { k: "CEO", v: active.ceo },
+              { k: "Headquarters", v: active.hq },
+              { k: "Founded", v: String(active.founded) },
+              { k: "Revenue", v: active.revenue },
+              { k: "Net Profit", v: active.netProfit },
+              { k: "Employees", v: active.employees },
+            ].map((x) => (
+              <div key={x.k} className="glass rounded-xl p-3">
+                <div className="text-[10px] uppercase text-muted-foreground tracking-wider">{x.k}</div>
+                <div className="text-sm font-medium mt-0.5">{x.v}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="glass rounded-xl p-4 mb-6">
+            <div className="text-xs uppercase tracking-widest text-[color:var(--cyan)] font-semibold mb-2">About the business</div>
+            <p className="text-sm text-muted-foreground leading-relaxed">{active.description}</p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4 mb-6">
+            <div className="glass rounded-xl p-4">
+              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Shareholding pattern</div>
+              <ShareholdingBar />
+            </div>
+            <div className="glass rounded-xl p-4">
+              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Major competitors</div>
+              <div className="flex flex-wrap gap-2">
+                {active.competitors.map((c) => (
+                  <span key={c} className="text-xs px-2.5 py-1 rounded-md glass border border-white/10">{c}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <button className="inline-flex items-center gap-2 h-11 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
+            View Complete Analysis <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ShareholdingBar() {
+  const parts = [
+    { k: "Promoters", v: 46, c: "var(--teal)" },
+    { k: "FII", v: 22, c: "var(--cyan)" },
+    { k: "DII", v: 18, c: "var(--aqua)" },
+    { k: "Retail", v: 14, c: "var(--lavender)" },
+  ];
+  return (
+    <div>
+      <div className="flex h-3 rounded-full overflow-hidden mb-3">
+        {parts.map((p) => (
+          <div key={p.k} style={{ width: `${p.v}%`, background: p.c }} />
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-y-1.5 text-xs">
+        {parts.map((p) => (
+          <div key={p.k} className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full" style={{ background: p.c }} />
+            <span className="text-muted-foreground">{p.k}</span>
+            <span className="ml-auto font-mono">{p.v}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Interactive Chart ---------- */
+function InteractiveChart() {
+  const ranges = ["1D", "1W", "1M", "6M", "1Y", "5Y"];
+  const [range, setRange] = useState("1M");
+  const [type, setType] = useState<"candle" | "line">("candle");
+  const data = useMemo(() => {
+    const n = { "1D": 40, "1W": 60, "1M": 90, "6M": 120, "1Y": 160, "5Y": 200 }[range]!;
+    const arr: { o: number; c: number; h: number; l: number }[] = [];
+    let v = 100;
+    for (let i = 0; i < n; i++) {
+      const o = v; const c = v * (1 + (Math.random() - 0.48) * 0.025);
+      const h = Math.max(o, c) * (1 + Math.random() * 0.008);
+      const l = Math.min(o, c) * (1 - Math.random() * 0.008);
+      arr.push({ o, c, h, l }); v = c;
+    }
+    return arr;
+  }, [range]);
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Interactive Charts"
+        title={<>Analyze <span className="gradient-text">Any Timeframe</span></>}
+        subtitle="Switch between candlestick and line, adjust the timeframe, and layer volume alongside the price action." />
+      <div className="glass-strong rounded-3xl p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="flex gap-1 glass rounded-xl p-1">
+            {ranges.map((r) => (
+              <button key={r} onClick={() => setRange(r)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${range === r ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>{r}</button>
+            ))}
+          </div>
+          <div className="flex gap-1 glass rounded-xl p-1">
+            <button onClick={() => setType("candle")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${type === "candle" ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground"}`}>
+              <CandlestickChart className="h-3.5 w-3.5" /> Candles
+            </button>
+            <button onClick={() => setType("line")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${type === "line" ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground"}`}>
+              <LineChart className="h-3.5 w-3.5" /> Line
+            </button>
+          </div>
+          <div className="ml-auto flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {["RSI", "MACD", "MA(20)", "MA(50)", "Volume"].map((i) => (
+              <span key={i} className="glass px-2.5 py-1 rounded-md border border-white/10">{i}</span>
+            ))}
+          </div>
+        </div>
+        <BigChart data={data} type={type} />
+      </div>
+    </section>
+  );
+}
+
+function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: number }[]; type: "candle" | "line" }) {
+  const w = 1100, h = 360, pad = 20;
+  const all = data.flatMap((d) => [d.h, d.l]);
+  const min = Math.min(...all), max = Math.max(...all);
+  const y = (v: number) => pad + (h - pad * 2) * (1 - (v - min) / (max - min));
+  const step = (w - pad * 2) / data.length;
+  const line = data.map((d, i) => `${pad + i * step},${y(d.c)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[300px] sm:h-[380px]">
+      <defs>
+        <linearGradient id="chartArea" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="var(--cyan)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {[0.2, 0.4, 0.6, 0.8].map((p) => (
+        <line key={p} x1="0" y1={h * p} x2={w} y2={h * p} stroke="currentColor" strokeOpacity="0.06" strokeDasharray="3 5" />
+      ))}
+      {type === "line" && (
+        <>
+          <path d={`M ${pad},${h} L ${line} L ${w - pad},${h} Z`} fill="url(#chartArea)" />
+          <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
+        </>
+      )}
+      {type === "candle" && data.map((d, i) => {
+        const x = pad + i * step; const up = d.c >= d.o;
+        const color = up ? "var(--gain)" : "var(--loss)";
+        return (
+          <g key={i}>
+            <line x1={x + step / 2} x2={x + step / 2} y1={y(d.h)} y2={y(d.l)} stroke={color} strokeWidth="1" />
+            <rect x={x + 1} y={y(Math.max(d.o, d.c))} width={Math.max(1, step - 2)} height={Math.max(1, Math.abs(y(d.o) - y(d.c)))} fill={color} rx="0.5" />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* ---------- Ratios ---------- */
+function Ratios() {
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Financial Ratios"
+        title={<>The <span className="gradient-text">Numbers That Matter</span></>}
+        subtitle="Every ratio comes with a beginner-friendly explanation." />
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {RATIOS.map((r) => (
+          <div key={r.name} className="glass rounded-2xl p-4 hover-lift">
+            <div className="text-[10px] uppercase tracking-widest text-[color:var(--cyan)] font-semibold">{r.name}</div>
+            <div className="font-mono text-2xl font-bold mt-1">{r.value}</div>
+            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{r.explain}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Gainers / Losers ---------- */
+function GainersLosers() {
+  const sorted = [...COMPANIES].sort((a, b) => b.changePct - a.changePct);
+  const gainers = sorted.filter((c) => c.change >= 0).slice(0, 5);
+  const losers = sorted.filter((c) => c.change < 0).reverse().slice(0, 5);
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Movers"
+        title={<>Today's <span className="gradient-text">Top Gainers & Losers</span></>}
+        subtitle="Auto-updated market movers across our tracked universe." />
+      <div className="grid md:grid-cols-2 gap-6">
+        <MoversTable title="Top Gainers" rows={gainers} up />
+        <MoversTable title="Top Losers" rows={losers} up={false} />
+      </div>
+    </section>
+  );
+}
+
+function MoversTable({ title, rows, up }: { title: string; rows: typeof COMPANIES; up: boolean }) {
+  return (
+    <div className="glass-strong rounded-2xl overflow-hidden">
+      <div className={`px-5 py-4 flex items-center gap-2 border-b border-white/10 ${up ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
+        {up ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+        <div className="font-semibold text-foreground">{title}</div>
+        <span className="ml-auto text-[10px] uppercase tracking-widest text-muted-foreground">Live</span>
+      </div>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            <th className="text-left px-5 py-2 font-medium">#</th>
+            <th className="text-left px-5 py-2 font-medium">Company</th>
+            <th className="text-right px-5 py-2 font-medium">Price</th>
+            <th className="text-right px-5 py-2 font-medium">Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.ticker} className="border-t border-white/5 hover:bg-white/5 transition">
+              <td className="px-5 py-3 text-muted-foreground font-mono text-xs">{i + 1}</td>
+              <td className="px-5 py-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-md grid place-items-center text-[10px] font-bold text-white" style={{ background: r.color }}>{r.logo}</div>
+                  <div>
+                    <div className="text-sm font-medium">{r.name}</div>
+                    <div className="text-[11px] text-muted-foreground">{r.ticker}</div>
+                  </div>
+                </div>
+              </td>
+              <td className="px-5 py-3 text-right font-mono">{r.ticker.length > 4 ? "₹" : "$"}{fmt(r.price)}</td>
+              <td className={`px-5 py-3 text-right font-mono font-semibold ${up ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
+                {up ? "+" : ""}{fmt(r.changePct)}%
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ---------- News ---------- */
+function NewsGrid() {
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="flex items-end justify-between flex-wrap gap-4" id="news">
+        <SectionTitle eyebrow="Market News" title={<>Latest <span className="gradient-text">Headlines</span></>}
+          subtitle="Curated from trusted financial news sources — updates automatically." />
+        <a href="#" className="text-sm text-[color:var(--cyan)] hover:underline">View all →</a>
+      </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {NEWS.map((n, i) => (
+          <article key={i} className="glass rounded-2xl overflow-hidden hover-lift group">
+            <div className="relative h-40 overflow-hidden" style={{ background: n.image }}>
+              <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--midnight)]/80 to-transparent" />
+              <div className="absolute top-3 left-3 text-[10px] uppercase tracking-widest bg-white/15 backdrop-blur px-2 py-1 rounded-md font-semibold">{n.category}</div>
+              <Newspaper className="absolute bottom-3 right-3 h-8 w-8 text-white/70" />
+            </div>
+            <div className="p-5">
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-2">
+                <span className="font-medium text-foreground/80">{n.source}</span>
+                <span>•</span><span>{n.time}</span>
+              </div>
+              <h3 className="font-semibold leading-snug mb-2 group-hover:text-[color:var(--cyan)] transition">{n.title}</h3>
+              <p className="text-sm text-muted-foreground line-clamp-2">{n.summary}</p>
+              <button className="mt-4 text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 hover:gap-2 transition-all">
+                Read more <ArrowUpRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Economic Calendar ---------- */
+function EconCalendar() {
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Economic Calendar"
+        title={<>Upcoming <span className="gradient-text">Market-Moving Events</span></>}
+        subtitle="Central-bank decisions, macro releases, earnings, and IPO dates." />
+      <div className="glass-strong rounded-2xl overflow-hidden">
+        <div className="hidden sm:grid grid-cols-[100px_100px_80px_1fr_100px] px-5 py-3 text-[11px] uppercase tracking-widest text-muted-foreground border-b border-white/10">
+          <div>Date</div><div>Time IST</div><div>Region</div><div>Event</div><div className="text-right">Impact</div>
+        </div>
+        {ECON_EVENTS.map((e, i) => (
+          <div key={i} className="grid grid-cols-2 sm:grid-cols-[100px_100px_80px_1fr_100px] px-5 py-4 border-b border-white/5 last:border-0 items-center gap-2 hover:bg-white/5 transition">
+            <div className="font-mono text-sm">{e.date}</div>
+            <div className="font-mono text-xs text-muted-foreground">{e.time}</div>
+            <div className="text-xs"><span className="glass px-2 py-0.5 rounded-md">{e.region}</span></div>
+            <div className="col-span-2 sm:col-span-1 text-sm font-medium">{e.event}</div>
+            <div className="text-right">
+              <span className={`text-[10px] font-semibold px-2 py-1 rounded-md ${
+                e.impact === "High" ? "bg-[color:var(--loss)]/15 text-[color:var(--loss)]" :
+                e.impact === "Medium" ? "bg-[color:var(--aqua)]/15 text-[color:var(--aqua)]" :
+                "bg-white/5 text-muted-foreground"
+              }`}>{e.impact}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- IPO ---------- */
+function IPOSection() {
+  const [tab, setTab] = useState<"Upcoming" | "Open" | "Closed">("Open");
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="IPO Center"
+        title={<>Track <span className="gradient-text">Every New Listing</span></>}
+        subtitle="Upcoming, open, and recently listed IPOs with price band, GMP, and subscription snapshot." />
+      <div className="flex gap-1 glass rounded-xl p-1 w-fit mb-6">
+        {(["Upcoming", "Open", "Closed"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition ${tab === t ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>{t}</button>
+        ))}
+      </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {IPOS.filter((i) => i.status === tab).map((i) => (
+          <div key={i.name} className="glass rounded-2xl p-5 hover-lift">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-11 w-11 rounded-xl grid place-items-center font-bold text-white shrink-0" style={{ background: i.color }}>
+                <Rocket className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold truncate">{i.name}</div>
+                <div className="text-[11px] text-muted-foreground">{i.date}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="glass rounded-lg py-2">
+                <div className="text-[10px] uppercase text-muted-foreground">Band</div>
+                <div className="text-xs font-mono font-semibold">{i.band}</div>
+              </div>
+              <div className="glass rounded-lg py-2">
+                <div className="text-[10px] uppercase text-muted-foreground">GMP</div>
+                <div className="text-xs font-mono font-semibold text-[color:var(--gain)]">{i.gmp}</div>
+              </div>
+              <div className="glass rounded-lg py-2">
+                <div className="text-[10px] uppercase text-muted-foreground">Sub.</div>
+                <div className="text-xs font-mono font-semibold">{i.sub}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Funds ---------- */
+function FundsSection() {
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Mutual Funds & ETFs"
+        title={<>Popular <span className="gradient-text">Funds Snapshot</span></>}
+        subtitle="Trailing returns, risk rating, expense ratio, and AUM at a glance." />
+      <div className="glass-strong rounded-2xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="text-[11px] uppercase tracking-widest text-muted-foreground">
+            <tr>
+              <th className="text-left px-5 py-3 font-medium">Fund</th>
+              <th className="text-left px-5 py-3 font-medium">Category</th>
+              <th className="text-right px-5 py-3 font-medium">1Y</th>
+              <th className="text-right px-5 py-3 font-medium hidden sm:table-cell">3Y</th>
+              <th className="text-left px-5 py-3 font-medium hidden md:table-cell">Risk</th>
+              <th className="text-right px-5 py-3 font-medium hidden md:table-cell">Expense</th>
+              <th className="text-right px-5 py-3 font-medium hidden lg:table-cell">AUM</th>
+            </tr>
+          </thead>
+          <tbody>
+            {FUNDS.map((f) => (
+              <tr key={f.name} className="border-t border-white/5 hover:bg-white/5 transition">
+                <td className="px-5 py-4 font-medium">{f.name}</td>
+                <td className="px-5 py-4 text-xs text-muted-foreground">{f.category}</td>
+                <td className="px-5 py-4 text-right font-mono text-[color:var(--gain)] font-semibold">+{fmt(f.return1y)}%</td>
+                <td className="px-5 py-4 text-right font-mono text-[color:var(--gain)] hidden sm:table-cell">+{fmt(f.return3y)}%</td>
+                <td className="px-5 py-4 hidden md:table-cell">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md ${f.risk === "High" ? "bg-[color:var(--loss)]/15 text-[color:var(--loss)]" : f.risk === "Moderate" ? "bg-[color:var(--aqua)]/15 text-[color:var(--aqua)]" : "bg-[color:var(--gain)]/15 text-[color:var(--gain)]"}`}>{f.risk}</span>
+                </td>
+                <td className="px-5 py-4 text-right font-mono text-xs hidden md:table-cell">{fmt(f.expense)}%</td>
+                <td className="px-5 py-4 text-right font-mono text-xs hidden lg:table-cell">{f.aum}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Education ---------- */
+function Education() {
+  const items = [
+    { icon: GraduationCap, title: "What is the Stock Market?", desc: "A plain-English intro to exchanges, tickers, orders, and price discovery." },
+    { icon: Rocket, title: "How to Start Investing", desc: "Open a demat, define goals, pick your first instruments, size positions." },
+    { icon: BarChart3, title: "Types of Stocks", desc: "Common vs preferred, large / mid / small-cap, cyclical vs defensive." },
+    { icon: Building2, title: "Fundamental Analysis", desc: "Read a P&L, balance sheet, and cash-flow statement like an analyst." },
+    { icon: LineChart, title: "Technical Analysis", desc: "Trends, support / resistance, moving averages, and RSI basics." },
+    { icon: ShieldCheck, title: "Risk Management", desc: "Position sizing, diversification, stop losses, and emotional discipline." },
+    { icon: Brain, title: "Investment Strategies", desc: "Value, growth, dividend, momentum, and index investing compared." },
+    { icon: Zap, title: "Options & Derivatives 101", desc: "How futures and options work — payoffs, greeks, and common strategies." },
+  ];
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Learn"
+        title={<>Investor <span className="gradient-text">Education Hub</span></>}
+        subtitle="Zero to informed — concise, jargon-free lessons for every experience level." />
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {items.map((i) => (
+          <div key={i.title} className="glass rounded-2xl p-5 hover-lift group">
+            <div className="h-10 w-10 rounded-xl gradient-brand grid place-items-center mb-4 text-[color:var(--midnight)]">
+              <i.icon className="h-5 w-5" strokeWidth={2.4} />
+            </div>
+            <h3 className="font-semibold mb-1.5">{i.title}</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-4">{i.desc}</p>
+            <button className="text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+              Learn more <ArrowUpRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Heatmap ---------- */
+function Heatmap() {
+  const shade = (v: number) => {
+    const abs = Math.min(1, Math.abs(v) / 3);
+    return v >= 0
+      ? `color-mix(in oklab, var(--gain) ${20 + abs * 55}%, transparent)`
+      : `color-mix(in oklab, var(--loss) ${20 + abs * 55}%, transparent)`;
+  };
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6" id="markets">
+      <SectionTitle eyebrow="Sector Heatmap"
+        title={<>Market Pulse by <span className="gradient-text">Sector</span></>}
+        subtitle="One glance shows where capital is rotating today." />
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        {SECTORS.map((s) => (
+          <div key={s.name} className="rounded-xl p-4 border border-white/10 hover-lift transition"
+               style={{ background: shade(s.change) }}>
+            <div className="text-xs font-semibold">{s.name}</div>
+            <div className={`font-mono text-lg font-bold mt-1 ${s.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
+              {s.change >= 0 ? "+" : ""}{fmt(s.change)}%
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Global Markets ---------- */
+function GlobalMarkets() {
+  const groups = ["US", "IN", "EU", "ASIA", "CRYPTO", "FX", "COMM"] as const;
+  const labels: Record<(typeof groups)[number], string> = { US: "US Markets", IN: "Indian Markets", EU: "European Markets", ASIA: "Asian Markets", CRYPTO: "Crypto", FX: "Forex", COMM: "Commodities" };
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Global Markets"
+        title={<>The <span className="gradient-text">World Board</span></>}
+        subtitle="Regional indices, crypto, FX, and commodities in one view." />
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {groups.map((g) => {
+          const rows = GLOBAL_MARKETS.filter((m) => m.region === g);
+          if (!rows.length) return null;
+          return (
+            <div key={g} className="glass-strong rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Globe2 className="h-4 w-4 text-[color:var(--cyan)]" />
+                <div className="font-semibold text-sm">{labels[g]}</div>
+              </div>
+              <div className="space-y-2.5">
+                {rows.map((r) => (
+                  <div key={r.name} className="flex items-center justify-between text-sm">
+                    <div className="text-muted-foreground">{r.name}</div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm">{r.value}</span>
+                      <span className={`font-mono text-xs w-16 text-right ${r.changePct >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
+                        {r.changePct >= 0 ? "+" : ""}{fmt(r.changePct)}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- AI Insights ---------- */
+function AIInsights() {
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="relative glass-strong rounded-3xl p-8 sm:p-12 overflow-hidden">
+        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-[color:var(--cyan)]/25 blur-[120px] pointer-events-none" />
+        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-[color:var(--aqua)]/20 blur-[120px] pointer-events-none" />
+        <div className="relative grid lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 text-xs font-semibold mb-5">
+              <Sparkles className="h-3.5 w-3.5 text-[color:var(--aqua)]" />
+              AI Market Insights • Informational Only
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
+              Today's <span className="gradient-text">market mood</span>, summarized by AI.
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              An overview of today's session — sector rotation, bullish and bearish undercurrents, notable highlights, and key risks. Generated by AI for context only; not investment advice.
+            </p>
+            <div className="mt-6 grid grid-cols-2 gap-3 max-w-md">
+              <Mood label="Overall Mood" value="Cautiously Bullish" tone="up" />
+              <Mood label="Volatility (VIX)" value="14.2 • Low" tone="n" />
+              <Mood label="Breadth" value="62% Advancers" tone="up" />
+              <Mood label="Sentiment Flow" value="Neutral → Positive" tone="n" />
+            </div>
+          </div>
+          <div className="space-y-3">
+            {[
+              { t: "Sector Leaders", d: "Technology (+2.4%) and Real Estate (+1.9%) lead as bond yields ease." },
+              { t: "Sector Laggards", d: "Metals (-1.8%) and Automobile (-1.2%) under pressure on China demand concerns." },
+              { t: "Highlights", d: "AI infrastructure names extend gains; NVIDIA up 3% on strong guidance." },
+              { t: "Risks to Watch", d: "US CPI print next week and RBI commentary on food-inflation trajectory." },
+            ].map((x) => (
+              <div key={x.t} className="glass rounded-xl p-4 hover-lift">
+                <div className="text-xs uppercase tracking-widest text-[color:var(--cyan)] font-semibold mb-1">{x.t}</div>
+                <div className="text-sm text-muted-foreground leading-relaxed">{x.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Mood({ label, value, tone }: { label: string; value: string; tone: "up" | "down" | "n" }) {
+  const c = tone === "up" ? "text-[color:var(--gain)]" : tone === "down" ? "text-[color:var(--loss)]" : "text-[color:var(--aqua)]";
+  return (
+    <div className="glass rounded-xl p-3">
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className={`font-semibold mt-0.5 text-sm ${c}`}>{value}</div>
+    </div>
+  );
+}
+
+/* ---------- Newsletter ---------- */
+function Newsletter() {
+  const [email, setEmail] = useState("");
+  const [ok, setOk] = useState(false);
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6" id="about">
+      <div className="relative overflow-hidden rounded-3xl p-10 sm:p-14 text-center gradient-brand text-[color:var(--midnight)]">
+        <div className="absolute inset-0 animate-grid opacity-25 pointer-events-none" />
+        <div className="relative max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-[color:var(--midnight)]/15 rounded-full px-3 py-1 text-xs font-semibold mb-4">
+            <Mail className="h-3.5 w-3.5" /> Newsletter
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold">Markets in your inbox, every morning.</h2>
+          <p className="mt-3 text-[color:var(--midnight)]/80">Daily updates, weekly deep dives, and beginner-friendly education — free, always.</p>
+          <form onSubmit={(e) => { e.preventDefault(); if (email.includes("@")) { setOk(true); setEmail(""); } }}
+            className="mt-6 flex flex-col sm:flex-row gap-2 max-w-lg mx-auto">
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required placeholder="you@email.com"
+              className="flex-1 h-12 px-4 rounded-xl bg-[color:var(--midnight)]/10 border border-[color:var(--midnight)]/20 placeholder:text-[color:var(--midnight)]/50 outline-none focus:border-[color:var(--midnight)]/60" />
+            <button className="h-12 px-6 rounded-xl bg-[color:var(--midnight)] text-white font-semibold hover:opacity-90 transition">Subscribe</button>
+          </form>
+          {ok && <div className="mt-3 text-sm">✓ You're on the list.</div>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Footer ---------- */
+function Footer() {
+  return (
+    <footer className="mt-10 border-t border-white/10 bg-[color:var(--midnight)] text-white/90">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-14">
+        <div className="grid md:grid-cols-4 gap-10">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-9 w-9 rounded-xl gradient-brand grid place-items-center">
+                <Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} />
+              </div>
+              <div className="font-display font-bold">StockVerse<span className="gradient-text"> AI</span></div>
+            </div>
+            <p className="text-sm text-white/60 leading-relaxed">Real-time market intelligence, company insights, and investor education — in one elegant platform.</p>
+          </div>
+          <FooterCol title="Quick Links" items={["Home", "Markets", "Companies", "News", "About"]} />
+          <FooterCol title="Legal" items={["Privacy Policy", "Terms & Conditions", "Disclaimer", "Contact"]} />
+          <div>
+            <div className="text-sm font-semibold mb-4">About the Website Owner</div>
+            <ul className="text-sm text-white/70 space-y-2">
+              <li>Name: <span className="text-white/50">______________</span></li>
+              <li>Email: <span className="text-white/50">______________</span></li>
+              <li className="flex items-center gap-1.5"><Linkedin className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
+              <li className="flex items-center gap-1.5"><Youtube className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
+              <li className="flex items-center gap-1.5"><Instagram className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
+              <li className="flex items-center gap-1.5"><Twitter className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-12 grid md:grid-cols-2 gap-4 text-xs text-white/60">
+          <div className="rounded-xl border border-white/10 p-4 leading-relaxed">
+            <div className="font-semibold text-white/90 mb-1">Disclaimer</div>
+            This website is created solely for educational and informational purposes. The information presented should not be considered financial, investment, tax, or legal advice. Always conduct your own research and consult a qualified financial advisor before making any investment decisions.
+          </div>
+          <div className="rounded-xl border border-white/10 p-4 leading-relaxed">
+            <div className="font-semibold text-white/90 mb-1">Affiliate Disclosure</div>
+            Some links on this website are affiliate links. If you purchase products or services through these links, I may earn a commission at no additional cost to you. This helps support the maintenance and development of the website.
+          </div>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-2 text-xs text-white/50">
+          <div>© 2026 StockVerse AI. All rights reserved.</div>
+          <div>Built for learners, by learners.</div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function FooterCol({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <div className="text-sm font-semibold mb-4">{title}</div>
+      <ul className="space-y-2 text-sm text-white/70">
+        {items.map((i) => (
+          <li key={i}><a href={`#${i.toLowerCase().replace(/[^a-z]/g, "")}`} className="hover:text-[color:var(--cyan)] transition">{i}</a></li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ---------- Page ---------- */
+function Home() {
+  const { light, toggle } = useTheme();
+  return (
+    <div className="min-h-screen">
+      <Header light={light} toggle={toggle} />
+      <main>
+        <Hero />
+        <LiveDashboard />
+        <Trending />
+        <CompanyProfile />
+        <InteractiveChart />
+        <Ratios />
+        <GainersLosers />
+        <NewsGrid />
+        <EconCalendar />
+        <IPOSection />
+        <FundsSection />
+        <Education />
+        <Heatmap />
+        <GlobalMarkets />
+        <AIInsights />
+        <Newsletter />
+      </main>
+      <Footer />
     </div>
   );
 }
