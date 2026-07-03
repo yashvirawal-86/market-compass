@@ -188,11 +188,7 @@ function Field({ label, value, onChange, type = "text", placeholder, required }:
     </div>
   );
 }
-        </div>
-      </div>
-    </header>
-  );
-}
+
 
 /* ---------- Hero ---------- */
 function Hero() {
