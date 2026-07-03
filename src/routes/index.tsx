@@ -1023,12 +1023,29 @@ function Footer() {
           <div>
             <div className="text-sm font-semibold mb-4">About the Website Owner</div>
             <ul className="text-sm text-white/70 space-y-2">
-              <li>Name: <span className="text-white/50">______________</span></li>
-              <li>Email: <span className="text-white/50">______________</span></li>
-              <li className="flex items-center gap-1.5"><Linkedin className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
-              <li className="flex items-center gap-1.5"><Youtube className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
-              <li className="flex items-center gap-1.5"><Instagram className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
-              <li className="flex items-center gap-1.5"><Twitter className="h-3.5 w-3.5" /> <span className="text-white/50">______________</span></li>
+              <li>Name: <span className="text-white">{OWNER.name}</span></li>
+              <li>
+                Email:{" "}
+                <a href={`mailto:${OWNER.email}`} className="text-white hover:text-[color:var(--cyan)] transition break-all">
+                  {OWNER.email}
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Linkedin className="h-3.5 w-3.5 shrink-0" />
+                <a href={OWNER.linkedin} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition break-all">
+                  linkedin.com/in/yashvi-rawal
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Youtube className="h-3.5 w-3.5 shrink-0" />
+                <a href={OWNER.youtube} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition break-all">
+                  youtube.com/@Yashvi-Rawal
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Globe2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="text-white break-all">{OWNER.site}</span>
+              </li>
             </ul>
           </div>
         </div>
