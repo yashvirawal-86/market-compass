@@ -656,31 +656,55 @@ function Meta({ k, v, tone }: { k: string; v: string; tone?: "up" | "down" | "n"
 }
 
 /* ---------- Company Profile ---------- */
+/** Indian tickers (dual-listed on NSE & BSE); everything else is US (NYSE/Nasdaq). */
+const INDIAN_TICKERS = new Set([
+  "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "LT", "TATAMOTORS", "ASIANPAINT",
+]);
+type Exchange = "ALL" | "NSE" | "BSE";
 function CompanyProfile() {
   const [q, setQ] = useState("");
+  const [exchange, setExchange] = useState<Exchange>("ALL");
   const [active, setActive] = useState(COMPANIES[0]);
-  const filtered = COMPANIES.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()) || c.ticker.toLowerCase().includes(q.toLowerCase()));
+  const filtered = COMPANIES.filter((c) => {
+    const matches = c.name.toLowerCase().includes(q.toLowerCase()) || c.ticker.toLowerCase().includes(q.toLowerCase());
+    if (!matches) return false;
+    const isIndian = INDIAN_TICKERS.has(c.ticker);
+    if (exchange === "NSE") return isIndian;
+    if (exchange === "BSE") return isIndian;
+    return true;
+  });
 
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="Company Intelligence"
         title={<>Deep-Dive <span className="gradient-text">Profiles</span></>}
-        subtitle="Search a company to review leadership, financials, competitors, and business context." />
+        subtitle="Browse listed companies by exchange, search for one, and explore leadership, financials, shareholding and business context." />
       <div className="grid lg:grid-cols-[320px_1fr] gap-6">
         <div className="glass-strong rounded-2xl p-4">
+          <div className="grid grid-cols-3 gap-1 glass rounded-xl p-1 mb-3">
+            {(["ALL", "NSE", "BSE"] as Exchange[]).map((ex) => (
+              <button key={ex} onClick={() => setExchange(ex)}
+                className={`h-8 rounded-lg text-xs font-semibold transition ${exchange === ex ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>
+                {ex}
+              </button>
+            ))}
+          </div>
           <div className="glass rounded-xl px-3 py-2 flex items-center gap-2 mb-3">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <input placeholder="Search companies…" value={q} onChange={(e) => setQ(e.target.value)}
+            <input placeholder={`Search ${exchange === "ALL" ? "all" : exchange} companies…`} value={q} onChange={(e) => setQ(e.target.value)}
               className="bg-transparent outline-none text-sm flex-1 min-w-0" />
           </div>
           <div className="max-h-[520px] overflow-y-auto space-y-1 pr-1">
+            {filtered.length === 0 && (
+              <div className="p-4 text-xs text-muted-foreground text-center">No listed companies match this filter.</div>
+            )}
             {filtered.map((c) => (
               <button key={c.ticker} onClick={() => setActive(c)}
                 className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition ${active.ticker === c.ticker ? "bg-[color:var(--cyan)]/15 border border-[color:var(--cyan)]/30" : "hover:bg-white/5 border border-transparent"}`}>
                 <div className="h-9 w-9 rounded-lg grid place-items-center text-xs font-bold text-white shrink-0" style={{ background: c.color }}>{c.logo}</div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{c.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{c.ticker} • {c.sector}</div>
+                  <div className="text-[11px] text-muted-foreground">{c.ticker} • {INDIAN_TICKERS.has(c.ticker) ? "NSE / BSE" : "US"}</div>
                 </div>
                 <div className={`text-xs font-mono ${c.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
                   {c.change >= 0 ? "+" : ""}{fmt(c.changePct)}%
@@ -689,6 +713,7 @@ function CompanyProfile() {
             ))}
           </div>
         </div>
+
 
         <div className="glass-strong rounded-2xl p-6 lg:p-8">
           <div className="flex flex-wrap items-start gap-4 justify-between mb-6">
