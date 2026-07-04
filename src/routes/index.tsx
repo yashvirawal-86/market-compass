@@ -1091,7 +1091,7 @@ function IPOSection() {
 /* ---------- Funds ---------- */
 function FundsSection() {
   return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+    <section id="funds" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="Mutual Funds & ETFs"
         title={<>Popular <span className="gradient-text">Funds Snapshot</span></>}
         subtitle="Trailing returns, risk rating, expense ratio, and AUM at a glance." />
