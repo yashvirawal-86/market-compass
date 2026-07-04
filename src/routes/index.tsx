@@ -1142,7 +1142,7 @@ function Education() {
     { icon: Zap, title: "Options & Derivatives 101", desc: "How futures and options work — payoffs, greeks, and common strategies." },
   ];
   return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+    <section id="learn" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="Learn"
         title={<>Investor <span className="gradient-text">Education Hub</span></>}
         subtitle="Zero to informed — concise, jargon-free lessons for every experience level." />
