@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Calendar, Newspaper,
@@ -14,7 +14,7 @@ const OWNER = {
   linkedin: "https://www.linkedin.com/in/yashvi-rawal",
   youtube: "https://www.youtube.com/@Yashvi-Rawal",
   instagram: "https://www.instagram.com/",
-  site: "www.yr.stockvverse.com",
+  site: "www.yr.stocketize.com",
 };
 const yahooQuote = (ticker: string) =>
   `https://finance.yahoo.com/quote/${encodeURIComponent(ticker.replace(/\./g, "-"))}`;
@@ -31,13 +31,49 @@ export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
     meta: [
-      { title: "StockVerse AI — Real-Time Stock Market Intelligence" },
-      { name: "description", content: "Live markets, company insights, financial ratios, IPOs, and AI-generated market summaries — for education only." },
-      { property: "og:title", content: "StockVerse AI" },
-      { property: "og:description", content: "Real-time stock market intelligence for smarter learning." },
+      { title: "Stocketize AI — Indian Stock Market Intelligence, News & Learning" },
+      { name: "description", content: "Live NSE & BSE market data, Nifty 50 & Sensex, company deep dives, IPOs, mutual funds, financial ratios and beginner-friendly investing education. Educational only — not financial advice." },
+      { name: "keywords", content: "Indian stock market, NSE, BSE, Nifty 50, Sensex, IPO, mutual funds, share market news, stock analysis, investing for beginners, Stocketize AI" },
+      { property: "og:type", content: "website" },
+      { property: "og:title", content: "Stocketize AI — Indian Stock Market Intelligence" },
+      { property: "og:description", content: "Live markets, deep-dive company profiles, IPOs and jargon-free investing education." },
+      { property: "og:site_name", content: "Stocketize AI" },
       { property: "og:url", content: "/" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Stocketize AI — Indian Stock Market Intelligence" },
+      { name: "twitter:description", content: "Live markets, company deep dives and beginner-friendly education." },
     ],
     links: [{ rel: "canonical", href: "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Stocketize AI",
+          url: "https://www.yr.stocketize.com/",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: "https://www.yr.stocketize.com/?q={search_term_string}",
+            "query-input": "required name=search_term_string",
+          },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            { "@type": "Question", name: "Is Stocketize AI giving me financial advice?", acceptedAnswer: { "@type": "Answer", text: "No. All content is AI-generated and strictly for education and information only. Always consult a SEBI-registered advisor before investing." } },
+            { "@type": "Question", name: "How current is the market data on Stocketize AI?", acceptedAnswer: { "@type": "Answer", text: "The platform simulates realistic Indian and global market data for demonstration. When connected to a live feed, indices, prices and news update automatically throughout market hours." } },
+            { "@type": "Question", name: "Do I need a paid account to use Stocketize AI?", acceptedAnswer: { "@type": "Answer", text: "No. Reading market data, company profiles, education and news is completely free. The newsletter is also free." } },
+            { "@type": "Question", name: "How often is the newsletter sent?", acceptedAnswer: { "@type": "Answer", text: "Subscribers receive a welcome brief immediately, a daily morning market update, and a longer weekend deep-dive." } },
+            { "@type": "Question", name: "I'm a complete beginner — where should I start?", acceptedAnswer: { "@type": "Answer", text: "Head to the Investor Education Hub on the home page and start with 'What is the Stock Market?' followed by 'How to Start Investing'." } },
+          ],
+        }),
+      },
+    ],
   }),
 });
 
@@ -68,7 +104,7 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
               <Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} />
             </div>
             <div className="hidden sm:block leading-tight">
-              <div className="font-display font-bold text-[15px] tracking-tight">StockVerse<span className="gradient-text"> AI</span></div>
+              <div className="font-display font-bold text-[15px] tracking-tight">Stocketize<span className="gradient-text"> AI</span></div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Market Intelligence</div>
             </div>
           </a>
@@ -84,23 +120,15 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
 
           <div className="flex-1" />
 
-          <div className="hidden md:flex items-center gap-2 glass rounded-xl px-3 py-1.5 min-w-0 max-w-xs">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input placeholder="Search stocks, indices, news…"
-                   className="bg-transparent outline-none text-sm min-w-0 flex-1 placeholder:text-muted-foreground/70" />
-            <kbd className="hidden xl:inline text-[10px] text-muted-foreground border border-white/10 rounded px-1.5 py-0.5">⌘K</kbd>
-          </div>
+          <SmartSearch />
+
 
           <button onClick={toggle} aria-label="Toggle theme"
             className="h-9 w-9 grid place-items-center rounded-xl glass hover:border-[color:var(--cyan)]/40 transition">
             {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
 
-          <button
-            onClick={() => (window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent("StockVerse AI — Login access request")}`)}
-            className="h-9 px-4 rounded-xl glass hover:border-[color:var(--cyan)]/40 text-sm font-semibold transition shrink-0">
-            Login
-          </button>
+          <LoginButton />
 
           <SignUpButton />
         </div>
@@ -109,22 +137,70 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
   );
 }
 
-/* ---------- Sign Up ---------- */
-function SignUpButton() {
+/* ---------- Login (Name + Mobile only) ---------- */
+function LoginButton() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", purpose: "" });
+  const [form, setForm] = useState({ name: "", phone: "" });
   const [sent, setSent] = useState(false);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = `New StockVerse AI Sign Up — ${form.name}`;
+    const subject = `Stocketize AI — Login request from ${form.name}`;
+    const body = `Name: ${form.name}\nMobile: ${form.phone}\nDate: ${new Date().toLocaleString()}`;
+    window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setSent(true);
+    setTimeout(() => { setOpen(false); setSent(false); setForm({ name: "", phone: "" }); }, 1200);
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="h-9 px-4 rounded-xl glass hover:border-[color:var(--cyan)]/40 text-sm font-semibold transition shrink-0">
+        Login
+      </button>
+      {open && (
+        <Modal onClose={() => setOpen(false)}>
+          <div className="mb-5">
+            <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Welcome back</div>
+            <h3 className="text-2xl font-bold leading-tight">Log in to <span className="gradient-text">Stocketize AI</span></h3>
+            <p className="text-sm text-muted-foreground mt-1">Enter the same name and mobile number you used when signing up.</p>
+          </div>
+          <form onSubmit={submit} className="space-y-3">
+            <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Jane Doe" required />
+            <Field label="Mobile number" type="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" required />
+            <button type="submit" className="w-full h-11 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
+              {sent ? "✓ Sent" : "Log in"}
+            </button>
+          </form>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/* ---------- Sign Up ---------- */
+function SignUpButton() {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", purpose: "" });
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agreePrivacy || !agreeTerms) return;
+    const subject = `New Stocketize AI Sign Up — ${form.name}`;
     const body = [
-      `A new visitor just signed up on StockVerse AI:`,
+      `A new visitor just signed up on Stocketize AI:`,
       ``,
       `Name:      ${form.name}`,
       `Email:     ${form.email}`,
       `Contact:   ${form.phone}`,
       `Purpose:   ${form.purpose}`,
+      ``,
+      `Accepted Privacy Policy: Yes`,
+      `Accepted Terms & Conditions: Yes`,
       ``,
       `Date:      ${new Date().toLocaleString()}`,
       `Site:      ${OWNER.site}`,
@@ -132,8 +208,14 @@ function SignUpButton() {
     window.location.href =
       `mailto:${OWNER.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setSent(true);
-    setTimeout(() => { setOpen(false); setSent(false); setForm({ name: "", email: "", phone: "", purpose: "" }); }, 1200);
+    setTimeout(() => {
+      setOpen(false); setSent(false);
+      setForm({ name: "", email: "", phone: "", purpose: "" });
+      setAgreePrivacy(false); setAgreeTerms(false);
+    }, 1200);
   };
+
+  const canSubmit = agreePrivacy && agreeTerms;
 
   return (
     <>
@@ -143,37 +225,154 @@ function SignUpButton() {
         Sign Up
       </button>
       {open && (
-        <div className="fixed inset-0 z-[100] grid place-items-center p-4 bg-[color:var(--midnight)]/70 backdrop-blur-sm animate-in fade-in"
-             onClick={() => setOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()}
-               className="glass-strong rounded-2xl w-full max-w-md p-6 sm:p-8 relative">
-            <button aria-label="Close" onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 transition text-muted-foreground">✕</button>
-            <div className="mb-5">
-              <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Join StockVerse AI</div>
-              <h3 className="text-2xl font-bold leading-tight">Create your <span className="gradient-text">free account</span></h3>
-              <p className="text-sm text-muted-foreground mt-1">Tell us a bit about yourself — we'll get you set up.</p>
-            </div>
-            <form onSubmit={submit} className="space-y-3">
-              <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Jane Doe" required />
-              <Field label="Email address" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@email.com" required />
-              <Field label="Contact number" type="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" required />
-              <div>
-                <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">Purpose of visit</label>
-                <textarea required rows={3} value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-                  placeholder="e.g. learning about the stock market, tracking my portfolio, researching companies…"
-                  className="mt-1 w-full px-3 py-2 rounded-xl glass bg-transparent border border-white/10 focus:border-[color:var(--cyan)]/50 outline-none text-sm resize-none" />
-              </div>
-              <button type="submit"
-                className="w-full h-11 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
-                {sent ? "✓ Submitted" : "Create Account"}
-              </button>
-              <p className="text-[11px] text-muted-foreground text-center">By signing up you agree to our educational-use disclaimer.</p>
-            </form>
+        <Modal onClose={() => setOpen(false)}>
+          <div className="mb-5">
+            <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Join Stocketize AI</div>
+            <h3 className="text-2xl font-bold leading-tight">Create your <span className="gradient-text">free account</span></h3>
+            <p className="text-sm text-muted-foreground mt-1">Tell us a bit about yourself — we'll get you set up.</p>
           </div>
-        </div>
+          <form onSubmit={submit} className="space-y-3">
+            <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Jane Doe" required />
+            <Field label="Email address" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@email.com" required />
+            <Field label="Contact number" type="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" required />
+            <div>
+              <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">Purpose of visit</label>
+              <textarea required rows={3} value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}
+                placeholder="e.g. learning about the stock market, tracking my portfolio, researching companies…"
+                className="mt-1 w-full px-3 py-2 rounded-xl glass bg-transparent border border-white/10 focus:border-[color:var(--cyan)]/50 outline-none text-sm resize-none" />
+            </div>
+
+            <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
+              <input type="checkbox" required checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-[color:var(--cyan)] shrink-0" />
+              <span>I have read and agree to the{" "}
+                <Link to="/privacy" target="_blank" className="text-[color:var(--cyan)] hover:underline">Privacy Policy</Link>.
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
+              <input type="checkbox" required checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-[color:var(--cyan)] shrink-0" />
+              <span>I accept the{" "}
+                <Link to="/terms" target="_blank" className="text-[color:var(--cyan)] hover:underline">Terms &amp; Conditions</Link>{" "}
+                and the{" "}
+                <Link to="/disclaimer" target="_blank" className="text-[color:var(--cyan)] hover:underline">Disclaimer</Link>.
+              </span>
+            </label>
+
+            <button type="submit" disabled={!canSubmit}
+              className="w-full h-11 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {sent ? "✓ Submitted" : "Create Account"}
+            </button>
+            {!canSubmit && (
+              <p className="text-[11px] text-muted-foreground text-center">Please accept both agreements to continue.</p>
+            )}
+          </form>
+        </Modal>
       )}
     </>
+  );
+}
+
+function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center p-4 bg-[color:var(--midnight)]/70 backdrop-blur-sm animate-in fade-in"
+         onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+           className="glass-strong rounded-2xl w-full max-w-md p-6 sm:p-8 relative">
+        <button aria-label="Close" onClick={onClose}
+          className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 transition text-muted-foreground">✕</button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Smart site-wide search ---------- */
+function SmartSearch() {
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  type Hit = { label: string; sub: string; type: string; href: string; external?: boolean };
+  const results: Hit[] = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return [];
+    const hits: Hit[] = [];
+    COMPANIES.forEach((c) => {
+      if (c.name.toLowerCase().includes(term) || c.ticker.toLowerCase().includes(term) || c.sector.toLowerCase().includes(term)) {
+        hits.push({ label: c.name, sub: `${c.ticker} • ${c.sector}`, type: "Company", href: "/#companies" });
+      }
+    });
+    SECTORS.forEach((s) => {
+      if (s.name.toLowerCase().includes(term)) hits.push({ label: s.name, sub: "Sector heatmap", type: "Sector", href: "/#markets" });
+    });
+    NEWS.forEach((n) => {
+      if (n.title.toLowerCase().includes(term) || n.category.toLowerCase().includes(term)) {
+        hits.push({ label: n.title, sub: `${n.source} • ${n.category}`, type: "News", href: googleNews(n.title), external: true });
+      }
+    });
+    IPOS.forEach((i) => {
+      if (i.name.toLowerCase().includes(term)) hits.push({ label: i.name, sub: `IPO • ${i.status} • ${i.date}`, type: "IPO", href: "/#ipos" });
+    });
+    FUNDS.forEach((f) => {
+      if (f.name.toLowerCase().includes(term) || f.category.toLowerCase().includes(term)) {
+        hits.push({ label: f.name, sub: `Fund • ${f.category}`, type: "Fund", href: "/#funds" });
+      }
+    });
+    RATIOS.forEach((r) => {
+      if (r.name.toLowerCase().includes(term) || r.explain.toLowerCase().includes(term)) {
+        hits.push({ label: r.name, sub: "Financial ratio", type: "Learn", href: investopedia(r.name), external: true });
+      }
+    });
+    const edu = [
+      "What is the Stock Market?", "How to Start Investing", "Types of Stocks",
+      "Fundamental Analysis", "Technical Analysis", "Risk Management",
+      "Investment Strategies", "Options & Derivatives 101",
+    ];
+    edu.forEach((e) => {
+      if (e.toLowerCase().includes(term)) hits.push({ label: e, sub: "Education", type: "Learn", href: "/#learn" });
+    });
+    return hits.slice(0, 8);
+  }, [q]);
+
+  return (
+    <div ref={ref} className="relative hidden md:block">
+      <div className="flex items-center gap-2 glass rounded-xl px-3 py-1.5 min-w-0 w-64">
+        <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+        <input
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search companies, sectors, IPOs…"
+          className="bg-transparent outline-none text-sm min-w-0 flex-1 placeholder:text-muted-foreground/70" />
+      </div>
+      {open && q.trim() && (
+        <div className="absolute right-0 mt-2 w-[420px] max-w-[92vw] glass-strong rounded-2xl p-2 shadow-2xl z-[80] max-h-[70vh] overflow-y-auto">
+          {results.length === 0 ? (
+            <div className="p-4 text-sm text-muted-foreground text-center">No matches for "{q}".</div>
+          ) : results.map((r, i) => (
+            <a key={i} href={r.href} target={r.external ? "_blank" : undefined} rel={r.external ? "noreferrer noopener" : undefined}
+               onClick={() => setOpen(false)}
+               className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition">
+              <span className="text-[10px] uppercase tracking-widest text-[color:var(--cyan)] font-semibold shrink-0 mt-0.5 w-14">{r.type}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium truncate">{r.label}</span>
+                <span className="block text-[11px] text-muted-foreground truncate">{r.sub}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -457,31 +656,55 @@ function Meta({ k, v, tone }: { k: string; v: string; tone?: "up" | "down" | "n"
 }
 
 /* ---------- Company Profile ---------- */
+/** Indian tickers (dual-listed on NSE & BSE); everything else is US (NYSE/Nasdaq). */
+const INDIAN_TICKERS = new Set([
+  "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "LT", "TATAMOTORS", "ASIANPAINT",
+]);
+type Exchange = "ALL" | "NSE" | "BSE";
 function CompanyProfile() {
   const [q, setQ] = useState("");
+  const [exchange, setExchange] = useState<Exchange>("ALL");
   const [active, setActive] = useState(COMPANIES[0]);
-  const filtered = COMPANIES.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()) || c.ticker.toLowerCase().includes(q.toLowerCase()));
+  const filtered = COMPANIES.filter((c) => {
+    const matches = c.name.toLowerCase().includes(q.toLowerCase()) || c.ticker.toLowerCase().includes(q.toLowerCase());
+    if (!matches) return false;
+    const isIndian = INDIAN_TICKERS.has(c.ticker);
+    if (exchange === "NSE") return isIndian;
+    if (exchange === "BSE") return isIndian;
+    return true;
+  });
 
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="Company Intelligence"
         title={<>Deep-Dive <span className="gradient-text">Profiles</span></>}
-        subtitle="Search a company to review leadership, financials, competitors, and business context." />
+        subtitle="Browse listed companies by exchange, search for one, and explore leadership, financials, shareholding and business context." />
       <div className="grid lg:grid-cols-[320px_1fr] gap-6">
         <div className="glass-strong rounded-2xl p-4">
+          <div className="grid grid-cols-3 gap-1 glass rounded-xl p-1 mb-3">
+            {(["ALL", "NSE", "BSE"] as Exchange[]).map((ex) => (
+              <button key={ex} onClick={() => setExchange(ex)}
+                className={`h-8 rounded-lg text-xs font-semibold transition ${exchange === ex ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>
+                {ex}
+              </button>
+            ))}
+          </div>
           <div className="glass rounded-xl px-3 py-2 flex items-center gap-2 mb-3">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <input placeholder="Search companies…" value={q} onChange={(e) => setQ(e.target.value)}
+            <input placeholder={`Search ${exchange === "ALL" ? "all" : exchange} companies…`} value={q} onChange={(e) => setQ(e.target.value)}
               className="bg-transparent outline-none text-sm flex-1 min-w-0" />
           </div>
           <div className="max-h-[520px] overflow-y-auto space-y-1 pr-1">
+            {filtered.length === 0 && (
+              <div className="p-4 text-xs text-muted-foreground text-center">No listed companies match this filter.</div>
+            )}
             {filtered.map((c) => (
               <button key={c.ticker} onClick={() => setActive(c)}
                 className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition ${active.ticker === c.ticker ? "bg-[color:var(--cyan)]/15 border border-[color:var(--cyan)]/30" : "hover:bg-white/5 border border-transparent"}`}>
                 <div className="h-9 w-9 rounded-lg grid place-items-center text-xs font-bold text-white shrink-0" style={{ background: c.color }}>{c.logo}</div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{c.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{c.ticker} • {c.sector}</div>
+                  <div className="text-[11px] text-muted-foreground">{c.ticker} • {INDIAN_TICKERS.has(c.ticker) ? "NSE / BSE" : "US"}</div>
                 </div>
                 <div className={`text-xs font-mono ${c.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
                   {c.change >= 0 ? "+" : ""}{fmt(c.changePct)}%
@@ -490,6 +713,7 @@ function CompanyProfile() {
             ))}
           </div>
         </div>
+
 
         <div className="glass-strong rounded-2xl p-6 lg:p-8">
           <div className="flex flex-wrap items-start gap-4 justify-between mb-6">
@@ -821,7 +1045,7 @@ function EconCalendar() {
 function IPOSection() {
   const [tab, setTab] = useState<"Upcoming" | "Open" | "Closed">("Open");
   return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+    <section id="ipos" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="IPO Center"
         title={<>Track <span className="gradient-text">Every New Listing</span></>}
         subtitle="Upcoming, open, and recently listed IPOs with price band, GMP, and subscription snapshot." />
@@ -867,7 +1091,7 @@ function IPOSection() {
 /* ---------- Funds ---------- */
 function FundsSection() {
   return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+    <section id="funds" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="Mutual Funds & ETFs"
         title={<>Popular <span className="gradient-text">Funds Snapshot</span></>}
         subtitle="Trailing returns, risk rating, expense ratio, and AUM at a glance." />
@@ -918,7 +1142,7 @@ function Education() {
     { icon: Zap, title: "Options & Derivatives 101", desc: "How futures and options work — payoffs, greeks, and common strategies." },
   ];
   return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+    <section id="learn" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="Learn"
         title={<>Investor <span className="gradient-text">Education Hub</span></>}
         subtitle="Zero to informed — concise, jargon-free lessons for every experience level." />
@@ -1070,11 +1294,11 @@ function Newsletter() {
   const [ok, setOk] = useState(false);
 
   const buildNewsletter = (to: string) => {
-    const subject = `Welcome to StockVerse AI — Your Daily Market Brief`;
+    const subject = `Welcome to Stocketize AI — Your Daily Market Brief`;
     const body = [
       `Hi there,`,
       ``,
-      `Thanks for subscribing to StockVerse AI — you're in!`,
+      `Thanks for subscribing to Stocketize AI — you're in!`,
       ``,
       `Here's a preview of what lands in your inbox every morning:`,
       ``,
@@ -1097,7 +1321,7 @@ function Newsletter() {
       `Read on the site: https://${OWNER.site}/#learn`,
       ``,
       `— ${OWNER.name}`,
-      `Founder, StockVerse AI`,
+      `Founder, Stocketize AI`,
       `${OWNER.email} • ${OWNER.linkedin} • ${OWNER.youtube}`,
       ``,
       `Educational content only. Not investment advice.`,
@@ -1113,7 +1337,7 @@ function Newsletter() {
     // 1) Notify owner of the new subscriber
     const notify =
       `mailto:${OWNER.email}` +
-      `?subject=${encodeURIComponent("New StockVerse AI subscriber")}` +
+      `?subject=${encodeURIComponent("New Stocketize AI subscriber")}` +
       `&body=${encodeURIComponent(`New subscriber: ${email}\nSite: ${OWNER.site}\nDate: ${new Date().toLocaleString()}`)}`;
     // 2) Compose the welcome newsletter to the subscriber
     const welcome =
@@ -1161,37 +1385,36 @@ function Footer() {
               <div className="h-9 w-9 rounded-xl gradient-brand grid place-items-center">
                 <Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} />
               </div>
-              <div className="font-display font-bold">StockVerse<span className="gradient-text"> AI</span></div>
+              <div className="font-display font-bold">Stocketize<span className="gradient-text"> AI</span></div>
             </div>
             <p className="text-sm text-white/60 leading-relaxed">Real-time market intelligence, company insights, and investor education — in one elegant platform.</p>
           </div>
-          <FooterCol title="Quick Links" items={["Home", "Markets", "Companies", "News", "About"]} />
-          <FooterCol title="Legal" items={["Privacy Policy", "Terms & Conditions", "Disclaimer", "Contact"]} />
+          <FooterCol title="Quick Links" items={[
+            { label: "Home", href: "#home" },
+            { label: "Markets", href: "#markets" },
+            { label: "Companies", href: "#companies" },
+            { label: "News", href: "#news" },
+            { label: "About", href: "#about" },
+          ]} />
+          <FooterCol title="Legal" items={[
+            { label: "Privacy Policy", to: "/privacy" },
+            { label: "Terms & Conditions", to: "/terms" },
+            { label: "Disclaimer", to: "/disclaimer" },
+            { label: "Affiliate Disclosure", to: "/affiliate-disclosure" },
+          ]} />
           <div>
             <div className="text-sm font-semibold mb-4">About the Website Owner</div>
             <ul className="text-sm text-white/70 space-y-2">
               <li>Name: <span className="text-white">{OWNER.name}</span></li>
-              <li>
-                Email:{" "}
-                <a href={`mailto:${OWNER.email}`} className="text-white hover:text-[color:var(--cyan)] transition break-all">
-                  {OWNER.email}
-                </a>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <Linkedin className="h-3.5 w-3.5 shrink-0" />
-                <a href={OWNER.linkedin} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition break-all">
-                  linkedin.com/in/yashvi-rawal
-                </a>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <Youtube className="h-3.5 w-3.5 shrink-0" />
-                <a href={OWNER.youtube} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition break-all">
-                  youtube.com/@Yashvi-Rawal
-                </a>
-              </li>
               <li className="flex items-center gap-1.5">
                 <Globe2 className="h-3.5 w-3.5 shrink-0" />
                 <span className="text-white break-all">{OWNER.site}</span>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 shrink-0" />
+                <a href={`mailto:${OWNER.email}`} className="text-white hover:text-[color:var(--cyan)] transition break-all">
+                  {OWNER.email}
+                </a>
               </li>
             </ul>
           </div>
@@ -1200,16 +1423,17 @@ function Footer() {
         <div className="mt-12 grid md:grid-cols-2 gap-4 text-xs text-white/60">
           <div className="rounded-xl border border-white/10 p-4 leading-relaxed">
             <div className="font-semibold text-white/90 mb-1">Disclaimer</div>
-            This website is created solely for educational and informational purposes. The information presented should not be considered financial, investment, tax, or legal advice. Always conduct your own research and consult a qualified financial advisor before making any investment decisions.
+            Stocketize AI is an AI-generated website created solely for educational and informational purposes. Nothing on this site is financial, investment, tax or legal advice. Always do your own research and consult a SEBI-registered / qualified financial advisor before making any investment decisions. Read the full <Link to="/disclaimer" className="underline hover:text-[color:var(--cyan)]">Disclaimer</Link>.
           </div>
           <div className="rounded-xl border border-white/10 p-4 leading-relaxed">
             <div className="font-semibold text-white/90 mb-1">Affiliate Disclosure</div>
-            Some links on this website are affiliate links. If you purchase products or services through these links, I may earn a commission at no additional cost to you. This helps support the maintenance and development of the website.
+            This website earns revenue through <strong>advertisements, affiliate partnerships, sponsored content and referral links</strong>. Commissions may be earned at no extra cost to you. See the full <Link to="/affiliate-disclosure" className="underline hover:text-[color:var(--cyan)]">Affiliate Disclosure</Link>.
           </div>
         </div>
 
+
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-2 text-xs text-white/50">
-          <div>© 2026 StockVerse AI. All rights reserved.</div>
+          <div>© 2026 Stocketize AI. All rights reserved.</div>
           <div>Built for learners, by learners.</div>
         </div>
       </div>
@@ -1217,16 +1441,95 @@ function Footer() {
   );
 }
 
-function FooterCol({ title, items }: { title: string; items: string[] }) {
+type FooterItem = { label: string; href?: string; to?: "/privacy" | "/terms" | "/disclaimer" | "/affiliate-disclosure" };
+function FooterCol({ title, items }: { title: string; items: FooterItem[] }) {
   return (
     <div>
       <div className="text-sm font-semibold mb-4">{title}</div>
       <ul className="space-y-2 text-sm text-white/70">
         {items.map((i) => (
-          <li key={i}><a href={`#${i.toLowerCase().replace(/[^a-z]/g, "")}`} className="hover:text-[color:var(--cyan)] transition">{i}</a></li>
+          <li key={i.label}>
+            {i.to ? (
+              <Link to={i.to} className="hover:text-[color:var(--cyan)] transition">{i.label}</Link>
+            ) : (
+              <a href={i.href} className="hover:text-[color:var(--cyan)] transition">{i.label}</a>
+            )}
+          </li>
         ))}
       </ul>
     </div>
+  );
+}
+
+
+/* ---------- Testimonials ---------- */
+function Testimonials() {
+  const items = [
+    { q: "The company deep-dives helped me understand what to actually look at before buying a stock. As a first-time investor from Pune, this is exactly what I needed.", n: "Ananya Menon", r: "Retail Investor • Pune" },
+    { q: "The daily brief is my morning coffee read. Concise, non-hyped, and it explains WHY the market moved — not just what happened.", n: "Rohan Iyer", r: "Software Engineer • Bengaluru" },
+    { q: "I use the ratios section to teach my finance students. Every metric comes with a plain-English explanation, which is rare on Indian sites.", n: "Prof. Meera Kulkarni", r: "MBA Faculty • Mumbai" },
+    { q: "Finally an educational platform that clearly says 'this isn't advice'. That honesty is what made me stick around.", n: "Vikram Shah", r: "Chartered Accountant • Ahmedabad" },
+    { q: "The IPO tracker and sector heatmap are super useful for weekend research. Clean UI, no clutter, and works well on my phone.", n: "Sneha Reddy", r: "Long-term Investor • Hyderabad" },
+  ];
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Community"
+        title={<>What <span className="gradient-text">Investors Say</span></>}
+        subtitle="Feedback from readers across India who use Stocketize AI to learn and stay informed." />
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {items.map((t) => (
+          <figure key={t.n} className="glass rounded-2xl p-6 hover-lift">
+            <div className="text-[color:var(--cyan)] text-3xl leading-none mb-2">"</div>
+            <blockquote className="text-sm leading-relaxed text-muted-foreground">{t.q}</blockquote>
+            <figcaption className="mt-5 flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full gradient-brand grid place-items-center text-[color:var(--midnight)] font-bold text-sm">
+                {t.n.split(" ").map((x) => x[0]).slice(0, 2).join("")}
+              </div>
+              <div>
+                <div className="text-sm font-semibold">{t.n}</div>
+                <div className="text-[11px] text-muted-foreground">{t.r}</div>
+              </div>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- FAQ ---------- */
+function FAQ() {
+  const items = [
+    { q: "Is Stocketize AI giving me financial advice?", a: "No. All content is AI-generated and strictly for education and information only. Nothing on the site is investment, tax or legal advice. Please consult a SEBI-registered advisor before making any investment." },
+    { q: "How current is the market data on Stocketize AI?", a: "The platform currently uses realistic simulated data for demonstration. When connected to a live NSE / BSE feed, indices, prices, gainers/losers, IPO status and news auto-refresh throughout market hours." },
+    { q: "Do I need to pay to use the website or the newsletter?", a: "No. Reading market data, company profiles, education content, IPOs, mutual funds, ratios and news is completely free. The daily newsletter is also free." },
+    { q: "How often is the newsletter sent and what does it contain?", a: "Subscribers receive a welcome brief immediately, a daily morning market update, and a weekend deep-dive. Content covers NSE/BSE movement, top gainers/losers, IPOs, economic events, and beginner-friendly education." },
+    { q: "I'm a complete beginner — where should I start?", a: "Open the Investor Education Hub on the home page and start with 'What is the Stock Market?' followed by 'How to Start Investing'. Every ratio in the Financial Ratios section also has a plain-English explanation." },
+  ];
+  const [openIdx, setOpenIdx] = useState<number | null>(0);
+  return (
+    <section className="relative py-20 mx-auto max-w-4xl px-4 sm:px-6" id="faq">
+      <SectionTitle eyebrow="FAQ"
+        title={<>Frequently <span className="gradient-text">Asked Questions</span></>}
+        subtitle="Quick answers about Stocketize AI, data accuracy, newsletters and getting started with Indian stock market investing." />
+      <div className="space-y-3">
+        {items.map((it, i) => {
+          const open = openIdx === i;
+          return (
+            <div key={it.q} className="glass rounded-2xl overflow-hidden border border-white/10">
+              <button onClick={() => setOpenIdx(open ? null : i)}
+                className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 hover:bg-white/5 transition">
+                <span className="text-sm sm:text-base font-semibold">{it.q}</span>
+                <ChevronRight className={`h-4 w-4 shrink-0 text-[color:var(--cyan)] transition-transform ${open ? "rotate-90" : ""}`} />
+              </button>
+              {open && (
+                <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">{it.a}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -1252,9 +1555,12 @@ function Home() {
         <Heatmap />
         <GlobalMarkets />
         <AIInsights />
+        <Testimonials />
+        <FAQ />
         <Newsletter />
       </main>
       <Footer />
     </div>
   );
 }
+
