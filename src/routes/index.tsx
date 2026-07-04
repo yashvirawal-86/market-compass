@@ -120,23 +120,15 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
 
           <div className="flex-1" />
 
-          <div className="hidden md:flex items-center gap-2 glass rounded-xl px-3 py-1.5 min-w-0 max-w-xs">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-            <input placeholder="Search stocks, indices, news…"
-                   className="bg-transparent outline-none text-sm min-w-0 flex-1 placeholder:text-muted-foreground/70" />
-            <kbd className="hidden xl:inline text-[10px] text-muted-foreground border border-white/10 rounded px-1.5 py-0.5">⌘K</kbd>
-          </div>
+          <SmartSearch />
+
 
           <button onClick={toggle} aria-label="Toggle theme"
             className="h-9 w-9 grid place-items-center rounded-xl glass hover:border-[color:var(--cyan)]/40 transition">
             {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
 
-          <button
-            onClick={() => (window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent("Stocketize AI — Login access request")}`)}
-            className="h-9 px-4 rounded-xl glass hover:border-[color:var(--cyan)]/40 text-sm font-semibold transition shrink-0">
-            Login
-          </button>
+          <LoginButton />
 
           <SignUpButton />
         </div>
@@ -145,14 +137,59 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
   );
 }
 
-/* ---------- Sign Up ---------- */
-function SignUpButton() {
+/* ---------- Login (Name + Mobile only) ---------- */
+function LoginButton() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", purpose: "" });
+  const [form, setForm] = useState({ name: "", phone: "" });
   const [sent, setSent] = useState(false);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    const subject = `Stocketize AI — Login request from ${form.name}`;
+    const body = `Name: ${form.name}\nMobile: ${form.phone}\nDate: ${new Date().toLocaleString()}`;
+    window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setSent(true);
+    setTimeout(() => { setOpen(false); setSent(false); setForm({ name: "", phone: "" }); }, 1200);
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="h-9 px-4 rounded-xl glass hover:border-[color:var(--cyan)]/40 text-sm font-semibold transition shrink-0">
+        Login
+      </button>
+      {open && (
+        <Modal onClose={() => setOpen(false)}>
+          <div className="mb-5">
+            <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Welcome back</div>
+            <h3 className="text-2xl font-bold leading-tight">Log in to <span className="gradient-text">Stocketize AI</span></h3>
+            <p className="text-sm text-muted-foreground mt-1">Enter the same name and mobile number you used when signing up.</p>
+          </div>
+          <form onSubmit={submit} className="space-y-3">
+            <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Jane Doe" required />
+            <Field label="Mobile number" type="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" required />
+            <button type="submit" className="w-full h-11 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
+              {sent ? "✓ Sent" : "Log in"}
+            </button>
+          </form>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/* ---------- Sign Up ---------- */
+function SignUpButton() {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", purpose: "" });
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!agreePrivacy || !agreeTerms) return;
     const subject = `New Stocketize AI Sign Up — ${form.name}`;
     const body = [
       `A new visitor just signed up on Stocketize AI:`,
@@ -162,14 +199,23 @@ function SignUpButton() {
       `Contact:   ${form.phone}`,
       `Purpose:   ${form.purpose}`,
       ``,
+      `Accepted Privacy Policy: Yes`,
+      `Accepted Terms & Conditions: Yes`,
+      ``,
       `Date:      ${new Date().toLocaleString()}`,
       `Site:      ${OWNER.site}`,
     ].join("\n");
     window.location.href =
       `mailto:${OWNER.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setSent(true);
-    setTimeout(() => { setOpen(false); setSent(false); setForm({ name: "", email: "", phone: "", purpose: "" }); }, 1200);
+    setTimeout(() => {
+      setOpen(false); setSent(false);
+      setForm({ name: "", email: "", phone: "", purpose: "" });
+      setAgreePrivacy(false); setAgreeTerms(false);
+    }, 1200);
   };
+
+  const canSubmit = agreePrivacy && agreeTerms;
 
   return (
     <>
@@ -179,37 +225,154 @@ function SignUpButton() {
         Sign Up
       </button>
       {open && (
-        <div className="fixed inset-0 z-[100] grid place-items-center p-4 bg-[color:var(--midnight)]/70 backdrop-blur-sm animate-in fade-in"
-             onClick={() => setOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()}
-               className="glass-strong rounded-2xl w-full max-w-md p-6 sm:p-8 relative">
-            <button aria-label="Close" onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 transition text-muted-foreground">✕</button>
-            <div className="mb-5">
-              <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Join Stocketize AI</div>
-              <h3 className="text-2xl font-bold leading-tight">Create your <span className="gradient-text">free account</span></h3>
-              <p className="text-sm text-muted-foreground mt-1">Tell us a bit about yourself — we'll get you set up.</p>
-            </div>
-            <form onSubmit={submit} className="space-y-3">
-              <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Jane Doe" required />
-              <Field label="Email address" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@email.com" required />
-              <Field label="Contact number" type="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" required />
-              <div>
-                <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">Purpose of visit</label>
-                <textarea required rows={3} value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-                  placeholder="e.g. learning about the stock market, tracking my portfolio, researching companies…"
-                  className="mt-1 w-full px-3 py-2 rounded-xl glass bg-transparent border border-white/10 focus:border-[color:var(--cyan)]/50 outline-none text-sm resize-none" />
-              </div>
-              <button type="submit"
-                className="w-full h-11 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
-                {sent ? "✓ Submitted" : "Create Account"}
-              </button>
-              <p className="text-[11px] text-muted-foreground text-center">By signing up you agree to our educational-use disclaimer.</p>
-            </form>
+        <Modal onClose={() => setOpen(false)}>
+          <div className="mb-5">
+            <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Join Stocketize AI</div>
+            <h3 className="text-2xl font-bold leading-tight">Create your <span className="gradient-text">free account</span></h3>
+            <p className="text-sm text-muted-foreground mt-1">Tell us a bit about yourself — we'll get you set up.</p>
           </div>
-        </div>
+          <form onSubmit={submit} className="space-y-3">
+            <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Jane Doe" required />
+            <Field label="Email address" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@email.com" required />
+            <Field label="Contact number" type="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" required />
+            <div>
+              <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">Purpose of visit</label>
+              <textarea required rows={3} value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}
+                placeholder="e.g. learning about the stock market, tracking my portfolio, researching companies…"
+                className="mt-1 w-full px-3 py-2 rounded-xl glass bg-transparent border border-white/10 focus:border-[color:var(--cyan)]/50 outline-none text-sm resize-none" />
+            </div>
+
+            <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
+              <input type="checkbox" required checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-[color:var(--cyan)] shrink-0" />
+              <span>I have read and agree to the{" "}
+                <Link to="/privacy" target="_blank" className="text-[color:var(--cyan)] hover:underline">Privacy Policy</Link>.
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
+              <input type="checkbox" required checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-[color:var(--cyan)] shrink-0" />
+              <span>I accept the{" "}
+                <Link to="/terms" target="_blank" className="text-[color:var(--cyan)] hover:underline">Terms &amp; Conditions</Link>{" "}
+                and the{" "}
+                <Link to="/disclaimer" target="_blank" className="text-[color:var(--cyan)] hover:underline">Disclaimer</Link>.
+              </span>
+            </label>
+
+            <button type="submit" disabled={!canSubmit}
+              className="w-full h-11 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed">
+              {sent ? "✓ Submitted" : "Create Account"}
+            </button>
+            {!canSubmit && (
+              <p className="text-[11px] text-muted-foreground text-center">Please accept both agreements to continue.</p>
+            )}
+          </form>
+        </Modal>
       )}
     </>
+  );
+}
+
+function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] grid place-items-center p-4 bg-[color:var(--midnight)]/70 backdrop-blur-sm animate-in fade-in"
+         onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+           className="glass-strong rounded-2xl w-full max-w-md p-6 sm:p-8 relative">
+        <button aria-label="Close" onClick={onClose}
+          className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 transition text-muted-foreground">✕</button>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Smart site-wide search ---------- */
+function SmartSearch() {
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  type Hit = { label: string; sub: string; type: string; href: string; external?: boolean };
+  const results: Hit[] = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return [];
+    const hits: Hit[] = [];
+    COMPANIES.forEach((c) => {
+      if (c.name.toLowerCase().includes(term) || c.ticker.toLowerCase().includes(term) || c.sector.toLowerCase().includes(term)) {
+        hits.push({ label: c.name, sub: `${c.ticker} • ${c.sector}`, type: "Company", href: "/#companies" });
+      }
+    });
+    SECTORS.forEach((s) => {
+      if (s.name.toLowerCase().includes(term)) hits.push({ label: s.name, sub: "Sector heatmap", type: "Sector", href: "/#markets" });
+    });
+    NEWS.forEach((n) => {
+      if (n.title.toLowerCase().includes(term) || n.category.toLowerCase().includes(term)) {
+        hits.push({ label: n.title, sub: `${n.source} • ${n.category}`, type: "News", href: googleNews(n.title), external: true });
+      }
+    });
+    IPOS.forEach((i) => {
+      if (i.name.toLowerCase().includes(term)) hits.push({ label: i.name, sub: `IPO • ${i.status} • ${i.date}`, type: "IPO", href: "/#ipos" });
+    });
+    FUNDS.forEach((f) => {
+      if (f.name.toLowerCase().includes(term) || f.category.toLowerCase().includes(term)) {
+        hits.push({ label: f.name, sub: `Fund • ${f.category}`, type: "Fund", href: "/#funds" });
+      }
+    });
+    RATIOS.forEach((r) => {
+      if (r.name.toLowerCase().includes(term) || r.explain.toLowerCase().includes(term)) {
+        hits.push({ label: r.name, sub: "Financial ratio", type: "Learn", href: investopedia(r.name), external: true });
+      }
+    });
+    const edu = [
+      "What is the Stock Market?", "How to Start Investing", "Types of Stocks",
+      "Fundamental Analysis", "Technical Analysis", "Risk Management",
+      "Investment Strategies", "Options & Derivatives 101",
+    ];
+    edu.forEach((e) => {
+      if (e.toLowerCase().includes(term)) hits.push({ label: e, sub: "Education", type: "Learn", href: "/#learn" });
+    });
+    return hits.slice(0, 8);
+  }, [q]);
+
+  return (
+    <div ref={ref} className="relative hidden md:block">
+      <div className="flex items-center gap-2 glass rounded-xl px-3 py-1.5 min-w-0 w-64">
+        <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+        <input
+          value={q}
+          onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search companies, sectors, IPOs…"
+          className="bg-transparent outline-none text-sm min-w-0 flex-1 placeholder:text-muted-foreground/70" />
+      </div>
+      {open && q.trim() && (
+        <div className="absolute right-0 mt-2 w-[420px] max-w-[92vw] glass-strong rounded-2xl p-2 shadow-2xl z-[80] max-h-[70vh] overflow-y-auto">
+          {results.length === 0 ? (
+            <div className="p-4 text-sm text-muted-foreground text-center">No matches for "{q}".</div>
+          ) : results.map((r, i) => (
+            <a key={i} href={r.href} target={r.external ? "_blank" : undefined} rel={r.external ? "noreferrer noopener" : undefined}
+               onClick={() => setOpen(false)}
+               className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition">
+              <span className="text-[10px] uppercase tracking-widest text-[color:var(--cyan)] font-semibold shrink-0 mt-0.5 w-14">{r.type}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium truncate">{r.label}</span>
+                <span className="block text-[11px] text-muted-foreground truncate">{r.sub}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
