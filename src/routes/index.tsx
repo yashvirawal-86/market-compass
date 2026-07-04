@@ -1462,6 +1462,77 @@ function FooterCol({ title, items }: { title: string; items: FooterItem[] }) {
 }
 
 
+/* ---------- Testimonials ---------- */
+function Testimonials() {
+  const items = [
+    { q: "The company deep-dives helped me understand what to actually look at before buying a stock. As a first-time investor from Pune, this is exactly what I needed.", n: "Ananya Menon", r: "Retail Investor • Pune" },
+    { q: "The daily brief is my morning coffee read. Concise, non-hyped, and it explains WHY the market moved — not just what happened.", n: "Rohan Iyer", r: "Software Engineer • Bengaluru" },
+    { q: "I use the ratios section to teach my finance students. Every metric comes with a plain-English explanation, which is rare on Indian sites.", n: "Prof. Meera Kulkarni", r: "MBA Faculty • Mumbai" },
+    { q: "Finally an educational platform that clearly says 'this isn't advice'. That honesty is what made me stick around.", n: "Vikram Shah", r: "Chartered Accountant • Ahmedabad" },
+    { q: "The IPO tracker and sector heatmap are super useful for weekend research. Clean UI, no clutter, and works well on my phone.", n: "Sneha Reddy", r: "Long-term Investor • Hyderabad" },
+  ];
+  return (
+    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+      <SectionTitle eyebrow="Community"
+        title={<>What <span className="gradient-text">Investors Say</span></>}
+        subtitle="Feedback from readers across India who use Stocketize AI to learn and stay informed." />
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {items.map((t) => (
+          <figure key={t.n} className="glass rounded-2xl p-6 hover-lift">
+            <div className="text-[color:var(--cyan)] text-3xl leading-none mb-2">"</div>
+            <blockquote className="text-sm leading-relaxed text-muted-foreground">{t.q}</blockquote>
+            <figcaption className="mt-5 flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full gradient-brand grid place-items-center text-[color:var(--midnight)] font-bold text-sm">
+                {t.n.split(" ").map((x) => x[0]).slice(0, 2).join("")}
+              </div>
+              <div>
+                <div className="text-sm font-semibold">{t.n}</div>
+                <div className="text-[11px] text-muted-foreground">{t.r}</div>
+              </div>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- FAQ ---------- */
+function FAQ() {
+  const items = [
+    { q: "Is Stocketize AI giving me financial advice?", a: "No. All content is AI-generated and strictly for education and information only. Nothing on the site is investment, tax or legal advice. Please consult a SEBI-registered advisor before making any investment." },
+    { q: "How current is the market data on Stocketize AI?", a: "The platform currently uses realistic simulated data for demonstration. When connected to a live NSE / BSE feed, indices, prices, gainers/losers, IPO status and news auto-refresh throughout market hours." },
+    { q: "Do I need to pay to use the website or the newsletter?", a: "No. Reading market data, company profiles, education content, IPOs, mutual funds, ratios and news is completely free. The daily newsletter is also free." },
+    { q: "How often is the newsletter sent and what does it contain?", a: "Subscribers receive a welcome brief immediately, a daily morning market update, and a weekend deep-dive. Content covers NSE/BSE movement, top gainers/losers, IPOs, economic events, and beginner-friendly education." },
+    { q: "I'm a complete beginner — where should I start?", a: "Open the Investor Education Hub on the home page and start with 'What is the Stock Market?' followed by 'How to Start Investing'. Every ratio in the Financial Ratios section also has a plain-English explanation." },
+  ];
+  const [openIdx, setOpenIdx] = useState<number | null>(0);
+  return (
+    <section className="relative py-20 mx-auto max-w-4xl px-4 sm:px-6" id="faq">
+      <SectionTitle eyebrow="FAQ"
+        title={<>Frequently <span className="gradient-text">Asked Questions</span></>}
+        subtitle="Quick answers about Stocketize AI, data accuracy, newsletters and getting started with Indian stock market investing." />
+      <div className="space-y-3">
+        {items.map((it, i) => {
+          const open = openIdx === i;
+          return (
+            <div key={it.q} className="glass rounded-2xl overflow-hidden border border-white/10">
+              <button onClick={() => setOpenIdx(open ? null : i)}
+                className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 hover:bg-white/5 transition">
+                <span className="text-sm sm:text-base font-semibold">{it.q}</span>
+                <ChevronRight className={`h-4 w-4 shrink-0 text-[color:var(--cyan)] transition-transform ${open ? "rotate-90" : ""}`} />
+              </button>
+              {open && (
+                <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">{it.a}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 /* ---------- Page ---------- */
 function Home() {
   const { light, toggle } = useTheme();
@@ -1484,9 +1555,12 @@ function Home() {
         <Heatmap />
         <GlobalMarkets />
         <AIInsights />
+        <Testimonials />
+        <FAQ />
         <Newsletter />
       </main>
       <Footer />
     </div>
   );
 }
+
