@@ -1441,18 +1441,26 @@ function Footer() {
   );
 }
 
-function FooterCol({ title, items }: { title: string; items: string[] }) {
+type FooterItem = { label: string; href?: string; to?: "/privacy" | "/terms" | "/disclaimer" | "/affiliate-disclosure" };
+function FooterCol({ title, items }: { title: string; items: FooterItem[] }) {
   return (
     <div>
       <div className="text-sm font-semibold mb-4">{title}</div>
       <ul className="space-y-2 text-sm text-white/70">
         {items.map((i) => (
-          <li key={i}><a href={`#${i.toLowerCase().replace(/[^a-z]/g, "")}`} className="hover:text-[color:var(--cyan)] transition">{i}</a></li>
+          <li key={i.label}>
+            {i.to ? (
+              <Link to={i.to} className="hover:text-[color:var(--cyan)] transition">{i.label}</Link>
+            ) : (
+              <a href={i.href} className="hover:text-[color:var(--cyan)] transition">{i.label}</a>
+            )}
+          </li>
         ))}
       </ul>
     </div>
   );
 }
+
 
 /* ---------- Page ---------- */
 function Home() {
