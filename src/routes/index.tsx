@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Calendar, Newspaper,
@@ -31,13 +31,49 @@ export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
     meta: [
-      { title: "Stocketize AI — Real-Time Stock Market Intelligence" },
-      { name: "description", content: "Live markets, company insights, financial ratios, IPOs, and AI-generated market summaries — for education only." },
-      { property: "og:title", content: "Stocketize AI" },
-      { property: "og:description", content: "Real-time stock market intelligence for smarter learning." },
+      { title: "Stocketize AI — Indian Stock Market Intelligence, News & Learning" },
+      { name: "description", content: "Live NSE & BSE market data, Nifty 50 & Sensex, company deep dives, IPOs, mutual funds, financial ratios and beginner-friendly investing education. Educational only — not financial advice." },
+      { name: "keywords", content: "Indian stock market, NSE, BSE, Nifty 50, Sensex, IPO, mutual funds, share market news, stock analysis, investing for beginners, Stocketize AI" },
+      { property: "og:type", content: "website" },
+      { property: "og:title", content: "Stocketize AI — Indian Stock Market Intelligence" },
+      { property: "og:description", content: "Live markets, deep-dive company profiles, IPOs and jargon-free investing education." },
+      { property: "og:site_name", content: "Stocketize AI" },
       { property: "og:url", content: "/" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Stocketize AI — Indian Stock Market Intelligence" },
+      { name: "twitter:description", content: "Live markets, company deep dives and beginner-friendly education." },
     ],
     links: [{ rel: "canonical", href: "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Stocketize AI",
+          url: "https://www.yr.stocketize.com/",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: "https://www.yr.stocketize.com/?q={search_term_string}",
+            "query-input": "required name=search_term_string",
+          },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            { "@type": "Question", name: "Is Stocketize AI giving me financial advice?", acceptedAnswer: { "@type": "Answer", text: "No. All content is AI-generated and strictly for education and information only. Always consult a SEBI-registered advisor before investing." } },
+            { "@type": "Question", name: "How current is the market data on Stocketize AI?", acceptedAnswer: { "@type": "Answer", text: "The platform simulates realistic Indian and global market data for demonstration. When connected to a live feed, indices, prices and news update automatically throughout market hours." } },
+            { "@type": "Question", name: "Do I need a paid account to use Stocketize AI?", acceptedAnswer: { "@type": "Answer", text: "No. Reading market data, company profiles, education and news is completely free. The newsletter is also free." } },
+            { "@type": "Question", name: "How often is the newsletter sent?", acceptedAnswer: { "@type": "Answer", text: "Subscribers receive a welcome brief immediately, a daily morning market update, and a longer weekend deep-dive." } },
+            { "@type": "Question", name: "I'm a complete beginner — where should I start?", acceptedAnswer: { "@type": "Answer", text: "Head to the Investor Education Hub on the home page and start with 'What is the Stock Market?' followed by 'How to Start Investing'." } },
+          ],
+        }),
+      },
+    ],
   }),
 });
 
