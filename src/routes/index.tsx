@@ -1389,33 +1389,32 @@ function Footer() {
             </div>
             <p className="text-sm text-white/60 leading-relaxed">Real-time market intelligence, company insights, and investor education — in one elegant platform.</p>
           </div>
-          <FooterCol title="Quick Links" items={["Home", "Markets", "Companies", "News", "About"]} />
-          <FooterCol title="Legal" items={["Privacy Policy", "Terms & Conditions", "Disclaimer", "Contact"]} />
+          <FooterCol title="Quick Links" items={[
+            { label: "Home", href: "#home" },
+            { label: "Markets", href: "#markets" },
+            { label: "Companies", href: "#companies" },
+            { label: "News", href: "#news" },
+            { label: "About", href: "#about" },
+          ]} />
+          <FooterCol title="Legal" items={[
+            { label: "Privacy Policy", to: "/privacy" },
+            { label: "Terms & Conditions", to: "/terms" },
+            { label: "Disclaimer", to: "/disclaimer" },
+            { label: "Affiliate Disclosure", to: "/affiliate-disclosure" },
+          ]} />
           <div>
             <div className="text-sm font-semibold mb-4">About the Website Owner</div>
             <ul className="text-sm text-white/70 space-y-2">
               <li>Name: <span className="text-white">{OWNER.name}</span></li>
-              <li>
-                Email:{" "}
-                <a href={`mailto:${OWNER.email}`} className="text-white hover:text-[color:var(--cyan)] transition break-all">
-                  {OWNER.email}
-                </a>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <Linkedin className="h-3.5 w-3.5 shrink-0" />
-                <a href={OWNER.linkedin} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition break-all">
-                  linkedin.com/in/yashvi-rawal
-                </a>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <Youtube className="h-3.5 w-3.5 shrink-0" />
-                <a href={OWNER.youtube} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition break-all">
-                  youtube.com/@Yashvi-Rawal
-                </a>
-              </li>
               <li className="flex items-center gap-1.5">
                 <Globe2 className="h-3.5 w-3.5 shrink-0" />
                 <span className="text-white break-all">{OWNER.site}</span>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5 shrink-0" />
+                <a href={`mailto:${OWNER.email}`} className="text-white hover:text-[color:var(--cyan)] transition break-all">
+                  {OWNER.email}
+                </a>
               </li>
             </ul>
           </div>
@@ -1424,13 +1423,14 @@ function Footer() {
         <div className="mt-12 grid md:grid-cols-2 gap-4 text-xs text-white/60">
           <div className="rounded-xl border border-white/10 p-4 leading-relaxed">
             <div className="font-semibold text-white/90 mb-1">Disclaimer</div>
-            This website is created solely for educational and informational purposes. The information presented should not be considered financial, investment, tax, or legal advice. Always conduct your own research and consult a qualified financial advisor before making any investment decisions.
+            Stocketize AI is an AI-generated website created solely for educational and informational purposes. Nothing on this site is financial, investment, tax or legal advice. Always do your own research and consult a SEBI-registered / qualified financial advisor before making any investment decisions. Read the full <Link to="/disclaimer" className="underline hover:text-[color:var(--cyan)]">Disclaimer</Link>.
           </div>
           <div className="rounded-xl border border-white/10 p-4 leading-relaxed">
             <div className="font-semibold text-white/90 mb-1">Affiliate Disclosure</div>
-            Some links on this website are affiliate links. If you purchase products or services through these links, I may earn a commission at no additional cost to you. This helps support the maintenance and development of the website.
+            This website earns revenue through <strong>advertisements, affiliate partnerships, sponsored content and referral links</strong>. Commissions may be earned at no extra cost to you. See the full <Link to="/affiliate-disclosure" className="underline hover:text-[color:var(--cyan)]">Affiliate Disclosure</Link>.
           </div>
         </div>
+
 
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-2 text-xs text-white/50">
           <div>© 2026 Stocketize AI. All rights reserved.</div>
