@@ -14,7 +14,7 @@ const OWNER = {
   linkedin: "https://www.linkedin.com/in/yashvi-rawal",
   youtube: "https://www.youtube.com/@Yashvi-Rawal",
   instagram: "https://www.instagram.com/",
-  site: "www.yr.stockvverse.com",
+  site: "www.yr.stocketize.com",
 };
 const yahooQuote = (ticker: string) =>
   `https://finance.yahoo.com/quote/${encodeURIComponent(ticker.replace(/\./g, "-"))}`;
@@ -31,9 +31,9 @@ export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
     meta: [
-      { title: "StockVerse AI — Real-Time Stock Market Intelligence" },
+      { title: "Stocketize AI — Real-Time Stock Market Intelligence" },
       { name: "description", content: "Live markets, company insights, financial ratios, IPOs, and AI-generated market summaries — for education only." },
-      { property: "og:title", content: "StockVerse AI" },
+      { property: "og:title", content: "Stocketize AI" },
       { property: "og:description", content: "Real-time stock market intelligence for smarter learning." },
       { property: "og:url", content: "/" },
     ],
@@ -68,7 +68,7 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
               <Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} />
             </div>
             <div className="hidden sm:block leading-tight">
-              <div className="font-display font-bold text-[15px] tracking-tight">StockVerse<span className="gradient-text"> AI</span></div>
+              <div className="font-display font-bold text-[15px] tracking-tight">Stocketize<span className="gradient-text"> AI</span></div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Market Intelligence</div>
             </div>
           </a>
@@ -97,7 +97,7 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
           </button>
 
           <button
-            onClick={() => (window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent("StockVerse AI — Login access request")}`)}
+            onClick={() => (window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent("Stocketize AI — Login access request")}`)}
             className="h-9 px-4 rounded-xl glass hover:border-[color:var(--cyan)]/40 text-sm font-semibold transition shrink-0">
             Login
           </button>
@@ -117,9 +117,9 @@ function SignUpButton() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = `New StockVerse AI Sign Up — ${form.name}`;
+    const subject = `New Stocketize AI Sign Up — ${form.name}`;
     const body = [
-      `A new visitor just signed up on StockVerse AI:`,
+      `A new visitor just signed up on Stocketize AI:`,
       ``,
       `Name:      ${form.name}`,
       `Email:     ${form.email}`,
@@ -150,7 +150,7 @@ function SignUpButton() {
             <button aria-label="Close" onClick={() => setOpen(false)}
               className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 transition text-muted-foreground">✕</button>
             <div className="mb-5">
-              <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Join StockVerse AI</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Join Stocketize AI</div>
               <h3 className="text-2xl font-bold leading-tight">Create your <span className="gradient-text">free account</span></h3>
               <p className="text-sm text-muted-foreground mt-1">Tell us a bit about yourself — we'll get you set up.</p>
             </div>
@@ -1070,11 +1070,11 @@ function Newsletter() {
   const [ok, setOk] = useState(false);
 
   const buildNewsletter = (to: string) => {
-    const subject = `Welcome to StockVerse AI — Your Daily Market Brief`;
+    const subject = `Welcome to Stocketize AI — Your Daily Market Brief`;
     const body = [
       `Hi there,`,
       ``,
-      `Thanks for subscribing to StockVerse AI — you're in!`,
+      `Thanks for subscribing to Stocketize AI — you're in!`,
       ``,
       `Here's a preview of what lands in your inbox every morning:`,
       ``,
@@ -1097,7 +1097,7 @@ function Newsletter() {
       `Read on the site: https://${OWNER.site}/#learn`,
       ``,
       `— ${OWNER.name}`,
-      `Founder, StockVerse AI`,
+      `Founder, Stocketize AI`,
       `${OWNER.email} • ${OWNER.linkedin} • ${OWNER.youtube}`,
       ``,
       `Educational content only. Not investment advice.`,
@@ -1113,7 +1113,7 @@ function Newsletter() {
     // 1) Notify owner of the new subscriber
     const notify =
       `mailto:${OWNER.email}` +
-      `?subject=${encodeURIComponent("New StockVerse AI subscriber")}` +
+      `?subject=${encodeURIComponent("New Stocketize AI subscriber")}` +
       `&body=${encodeURIComponent(`New subscriber: ${email}\nSite: ${OWNER.site}\nDate: ${new Date().toLocaleString()}`)}`;
     // 2) Compose the welcome newsletter to the subscriber
     const welcome =
@@ -1161,7 +1161,7 @@ function Footer() {
               <div className="h-9 w-9 rounded-xl gradient-brand grid place-items-center">
                 <Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} />
               </div>
-              <div className="font-display font-bold">StockVerse<span className="gradient-text"> AI</span></div>
+              <div className="font-display font-bold">Stocketize<span className="gradient-text"> AI</span></div>
             </div>
             <p className="text-sm text-white/60 leading-relaxed">Real-time market intelligence, company insights, and investor education — in one elegant platform.</p>
           </div>
@@ -1209,7 +1209,7 @@ function Footer() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-2 text-xs text-white/50">
-          <div>© 2026 StockVerse AI. All rights reserved.</div>
+          <div>© 2026 Stocketize AI. All rights reserved.</div>
           <div>Built for learners, by learners.</div>
         </div>
       </div>
