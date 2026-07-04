@@ -1045,7 +1045,7 @@ function EconCalendar() {
 function IPOSection() {
   const [tab, setTab] = useState<"Upcoming" | "Open" | "Closed">("Open");
   return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
+    <section id="ipos" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="IPO Center"
         title={<>Track <span className="gradient-text">Every New Listing</span></>}
         subtitle="Upcoming, open, and recently listed IPOs with price band, GMP, and subscription snapshot." />
