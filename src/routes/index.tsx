@@ -1307,65 +1307,28 @@ function Mood({ label, value, tone }: { label: string; value: string; tone: "up"
 /* ---------- Newsletter ---------- */
 function Newsletter() {
   const [email, setEmail] = useState("");
-  const [ok, setOk] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "ok" | "err">("idle");
+  const [msg, setMsg] = useState("");
+  const subscribe = useServerFn(subscribeToNewsletter);
 
-  const buildNewsletter = (to: string) => {
-    const subject = `Welcome to Stocketize AI — Your Daily Market Brief`;
-    const body = [
-      `Hi there,`,
-      ``,
-      `Thanks for subscribing to Stocketize AI — you're in!`,
-      ``,
-      `Here's a preview of what lands in your inbox every morning:`,
-      ``,
-      `📈 MARKETS TODAY`,
-      `• NIFTY 50: 24,856 (+0.58%)   • SENSEX: 81,532 (-0.27%)`,
-      `• NASDAQ: 20,114 (+0.94%)     • S&P 500: 5,824 (+0.55%)`,
-      `• Gold: $2,687/oz (+0.54%)    • Crude (WTI): $71.32 (+1.25%)`,
-      ``,
-      `🔥 TOP MOVERS`,
-      `• NVIDIA extends gains on strong Blackwell demand.`,
-      `• Indian IT firms raise FY26 guidance on BFSI deal revival.`,
-      `• Metals under pressure on China demand concerns.`,
-      ``,
-      `🧠 AI MARKET MOOD`,
-      `Cautiously bullish. Breadth positive (62% advancers), VIX low at 14.2.`,
-      `Watch: US CPI print next week + RBI commentary on food inflation.`,
-      ``,
-      `📚 LEARN TODAY`,
-      `"Fundamental vs Technical Analysis — which one should a beginner start with?"`,
-      `Read on the site: https://${OWNER.site}/#learn`,
-      ``,
-      `— ${OWNER.name}`,
-      `Founder, Stocketize AI`,
-      `${OWNER.email} • ${OWNER.linkedin} • ${OWNER.youtube}`,
-      ``,
-      `Educational content only. Not investment advice.`,
-      `You're subscribed as: ${to}`,
-    ].join("\n");
-    return { subject, body };
-  };
-
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes("@")) return;
-    const { subject, body } = buildNewsletter(email);
-    // 1) Notify owner of the new subscriber
-    const notify =
-      `mailto:${OWNER.email}` +
-      `?subject=${encodeURIComponent("New Stocketize AI subscriber")}` +
-      `&body=${encodeURIComponent(`New subscriber: ${email}\nSite: ${OWNER.site}\nDate: ${new Date().toLocaleString()}`)}`;
-    // 2) Compose the welcome newsletter to the subscriber
-    const welcome =
-      `mailto:${email}` +
-      `?cc=${OWNER.email}` +
-      `&subject=${encodeURIComponent(subject)}` +
-      `&body=${encodeURIComponent(body)}`;
-    // Open owner notification in background, welcome in foreground
-    try { window.open(notify, "_blank"); } catch {}
-    window.location.href = welcome;
-    setOk(true);
-    setEmail("");
+    setStatus("sending");
+    try {
+      const res = await subscribe({ data: { email } });
+      if (res.ok) {
+        setStatus("ok");
+        setMsg("✓ You're on the list — your welcome market brief is on the way.");
+        setEmail("");
+      } else {
+        setStatus("err");
+        setMsg(res.error ?? "Something went wrong. Please try again.");
+      }
+    } catch {
+      setStatus("err");
+      setMsg("Network issue — please try again in a moment.");
+    }
   };
 
   return (
@@ -1381,12 +1344,39 @@ function Newsletter() {
           <form onSubmit={onSubmit} className="mt-6 flex flex-col sm:flex-row gap-2 max-w-lg mx-auto">
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required placeholder="you@email.com"
               className="flex-1 h-12 px-4 rounded-xl bg-[color:var(--midnight)]/10 border border-[color:var(--midnight)]/20 placeholder:text-[color:var(--midnight)]/50 outline-none focus:border-[color:var(--midnight)]/60" />
-            <button type="submit" className="h-12 px-6 rounded-xl bg-[color:var(--midnight)] text-white font-semibold hover:opacity-90 transition">Subscribe</button>
+            <button type="submit" disabled={status === "sending"}
+              className="h-12 px-6 rounded-xl bg-[color:var(--midnight)] text-white font-semibold hover:opacity-90 transition disabled:opacity-70">
+              {status === "sending" ? "Subscribing…" : "Subscribe"}
+            </button>
           </form>
-          {ok && <div className="mt-3 text-sm">✓ You're on the list — check your mail app for your welcome brief.</div>}
+          {status === "ok" && <div className="mt-3 text-sm">{msg}</div>}
+          {status === "err" && <div className="mt-3 text-sm text-[color:var(--midnight)]/90">{msg}</div>}
+          <p className="mt-3 text-[11px] text-[color:var(--midnight)]/70">
+            By subscribing you agree to receive market emails from {OWNER.name}. Unsubscribe anytime.
+          </p>
         </div>
       </div>
     </section>
+  );
+}
+
+/* ---------- Floating WhatsApp button ---------- */
+function WhatsAppFab() {
+  return (
+    <a
+      href={OWNER.whatsapp}
+      target="_blank"
+      rel="noreferrer noopener"
+      aria-label="Chat with Stocketize on WhatsApp"
+      className="fixed bottom-6 right-6 z-[90] h-14 w-14 rounded-full grid place-items-center shadow-2xl transition hover:scale-110 group"
+      style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}
+    >
+      <MessageCircle className="h-6 w-6 text-white" strokeWidth={2.4} />
+      <span className="absolute right-full mr-3 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold bg-[color:var(--midnight)] text-white opacity-0 group-hover:opacity-100 transition pointer-events-none">
+        Chat on WhatsApp
+      </span>
+      <span className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ background: "#25D366" }} />
+    </a>
   );
 }
 
