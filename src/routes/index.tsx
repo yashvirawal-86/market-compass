@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Newspaper,
-  Rocket, GraduationCap, Globe2, Brain, Mail, MessageCircle,
+  Rocket, GraduationCap, Globe2, Brain, Mail, MessageCircle, Phone,
   ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart,
 } from "lucide-react";
 
@@ -17,7 +17,8 @@ const OWNER = {
   instagram: "https://www.instagram.com/",
   site: "www.yr.stocketize.com",
   whatsapp: "https://wa.me/919550541145",
-  whatsappDisplay: "+91 95505 41145",
+  whatsappDisplay: "+91 9550541145",
+  phone: "9550541145",
 };
 const yahooQuote = (ticker: string) =>
   `https://finance.yahoo.com/quote/${encodeURIComponent(ticker.replace(/\./g, "-"))}`;
@@ -1413,13 +1414,9 @@ function Footer() {
             <ul className="text-sm text-white/70 space-y-2">
               <li>Name: <span className="text-white">{OWNER.name}</span></li>
               <li className="flex items-center gap-1.5">
-                <Globe2 className="h-3.5 w-3.5 shrink-0" />
-                <span className="text-white break-all">{OWNER.site}</span>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5 shrink-0" />
-                <a href={`mailto:${OWNER.email}`} className="text-white hover:text-[color:var(--cyan)] transition break-all">
-                  {OWNER.email}
+                <Phone className="h-3.5 w-3.5 shrink-0" />
+                <a href={`tel:${OWNER.phone}`} className="text-white hover:text-[color:var(--cyan)] transition">
+                  Contact No. — {OWNER.phone}
                 </a>
               </li>
               <li className="flex items-center gap-1.5">
@@ -1428,14 +1425,6 @@ function Footer() {
                   className="text-white hover:text-[color:var(--cyan)] transition">
                   WhatsApp — {OWNER.whatsappDisplay}
                 </a>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <Globe2 className="h-3.5 w-3.5 shrink-0" />
-                <a href={OWNER.linkedin} target="_blank" rel="noreferrer noopener"
-                  className="text-white hover:text-[color:var(--cyan)] transition break-all">LinkedIn</a>
-                <span className="text-white/40">·</span>
-                <a href={OWNER.youtube} target="_blank" rel="noreferrer noopener"
-                  className="text-white hover:text-[color:var(--cyan)] transition">YouTube</a>
               </li>
             </ul>
           </div>
