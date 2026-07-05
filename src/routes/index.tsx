@@ -1000,8 +1000,10 @@ function NewsGrid() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {NEWS.map((n, i) => (
           <article key={i} className="glass rounded-2xl overflow-hidden hover-lift group">
-            <div className="relative h-40 overflow-hidden" style={{ background: n.image }}>
-              <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--midnight)]/80 to-transparent" />
+            <div className="relative h-40 overflow-hidden bg-white/5">
+              <img src={n.image} alt={n.title} loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--midnight)]/85 via-[color:var(--midnight)]/20 to-transparent" />
               <div className="absolute top-3 left-3 text-[10px] uppercase tracking-widest bg-white/15 backdrop-blur px-2 py-1 rounded-md font-semibold">{n.category}</div>
               <Newspaper className="absolute bottom-3 right-3 h-8 w-8 text-white/70" />
             </div>
