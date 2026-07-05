@@ -792,18 +792,13 @@ function CompanyProfile() {
   );
 }
 
-function ShareholdingBar() {
-  const parts = [
-    { k: "Promoters", v: 46, c: "var(--teal)" },
-    { k: "FII", v: 22, c: "var(--cyan)" },
-    { k: "DII", v: 18, c: "var(--aqua)" },
-    { k: "Retail", v: 14, c: "var(--lavender)" },
-  ];
+function ShareholdingBar({ parts }: { parts: Shareholder[] }) {
+  const total = parts.reduce((a, p) => a + p.v, 0) || 1;
   return (
     <div>
       <div className="flex h-3 rounded-full overflow-hidden mb-3">
         {parts.map((p) => (
-          <div key={p.k} style={{ width: `${p.v}%`, background: p.c }} />
+          <div key={p.k} style={{ width: `${(p.v / total) * 100}%`, background: p.c }} />
         ))}
       </div>
       <div className="grid grid-cols-2 gap-y-1.5 text-xs">
@@ -811,7 +806,7 @@ function ShareholdingBar() {
           <div key={p.k} className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full" style={{ background: p.c }} />
             <span className="text-muted-foreground">{p.k}</span>
-            <span className="ml-auto font-mono">{p.v}%</span>
+            <span className="ml-auto font-mono">{fmt(p.v)}%</span>
           </div>
         ))}
       </div>
