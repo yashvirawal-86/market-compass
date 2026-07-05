@@ -867,7 +867,7 @@ function InteractiveChart() {
   );
 }
 
-function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: number }[]; type: "candle" | "line" }) {
+function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: number }[]; type: "candle" | "line" | "area" }) {
   const w = 1100, h = 360, pad = 20;
   const all = data.flatMap((d) => [d.h, d.l]);
   const min = Math.min(...all), max = Math.max(...all);
@@ -878,7 +878,7 @@ function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: 
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[300px] sm:h-[380px]">
       <defs>
         <linearGradient id="chartArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.35" />
+          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.5" />
           <stop offset="100%" stopColor="var(--cyan)" stopOpacity="0" />
         </linearGradient>
       </defs>
@@ -886,8 +886,11 @@ function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: 
         <line key={p} x1="0" y1={h * p} x2={w} y2={h * p} stroke="currentColor" strokeOpacity="0.06" strokeDasharray="3 5" />
       ))}
       {type === "line" && (
+        <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
+      )}
+      {type === "area" && (
         <>
-          <path d={`M ${pad},${h} L ${line} L ${w - pad},${h} Z`} fill="url(#chartArea)" />
+          <path d={`M ${pad},${h - pad} L ${line} L ${w - pad},${h - pad} Z`} fill="url(#chartArea)" />
           <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
         </>
       )}
