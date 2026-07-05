@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Calendar, Newspaper,
-  Rocket, GraduationCap, Globe2, Brain, Mail, Youtube, Linkedin, Instagram,
-  ShieldCheck, Zap, DollarSign, IndianRupee, ChevronRight, Play, LayoutDashboard, Building2,
+  Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Newspaper,
+  Rocket, GraduationCap, Globe2, Brain, Mail, MessageCircle,
+  ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart,
 } from "lucide-react";
 
 /* ---------- Owner + external link helpers ---------- */
@@ -15,6 +16,8 @@ const OWNER = {
   youtube: "https://www.youtube.com/@Yashvi-Rawal",
   instagram: "https://www.instagram.com/",
   site: "www.yr.stocketize.com",
+  whatsapp: "https://wa.me/919550541145",
+  whatsappDisplay: "+91 95505 41145",
 };
 const yahooQuote = (ticker: string) =>
   `https://finance.yahoo.com/quote/${encodeURIComponent(ticker.replace(/\./g, "-"))}`;
@@ -25,7 +28,9 @@ const investopedia = (q: string) =>
 import { Sparkline, fmt } from "@/components/sparkline";
 import {
   MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, IPOS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
+  type Shareholder,
 } from "@/lib/market-data";
+import { subscribeToNewsletter } from "@/lib/newsletter.functions";
 
 export const Route = createFileRoute("/")({
   component: Home,
