@@ -818,7 +818,7 @@ function ShareholdingBar({ parts }: { parts: Shareholder[] }) {
 function InteractiveChart() {
   const ranges = ["1D", "1W", "1M", "6M", "1Y", "5Y"];
   const [range, setRange] = useState("1M");
-  const [type, setType] = useState<"candle" | "line">("candle");
+  const [type, setType] = useState<"candle" | "line" | "area">("candle");
   const data = useMemo(() => {
     const n = { "1D": 40, "1W": 60, "1M": 90, "6M": 120, "1Y": 160, "5Y": 200 }[range]!;
     const arr: { o: number; c: number; h: number; l: number }[] = [];
