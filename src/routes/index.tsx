@@ -770,7 +770,7 @@ function CompanyProfile() {
           <div className="grid sm:grid-cols-2 gap-4 mb-6">
             <div className="glass rounded-xl p-4">
               <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Shareholding pattern</div>
-              <ShareholdingBar />
+              <ShareholdingBar parts={active.shareholding} />
             </div>
             <div className="glass rounded-xl p-4">
               <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Major competitors</div>
