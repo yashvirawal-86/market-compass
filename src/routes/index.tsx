@@ -1491,6 +1491,7 @@ function Testimonials() {
     { q: "I use the ratios section to teach my finance students. Every metric comes with a plain-English explanation, which is rare on Indian sites.", n: "Prof. Meera Kulkarni", r: "MBA Faculty • Mumbai" },
     { q: "Finally an educational platform that clearly says 'this isn't advice'. That honesty is what made me stick around.", n: "Vikram Shah", r: "Chartered Accountant • Ahmedabad" },
     { q: "The IPO tracker and sector heatmap are super useful for weekend research. Clean UI, no clutter, and works well on my phone.", n: "Sneha Reddy", r: "Long-term Investor • Hyderabad" },
+    { q: "The WhatsApp support is a lovely touch. I had a question about the ratios section and got a clear, honest reply within a day — no salesy pitch, just help.", n: "Karan Bhatia", r: "Aspiring Trader • Jaipur" },
   ];
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
