@@ -1582,6 +1582,7 @@ function Home() {
         <Newsletter />
       </main>
       <Footer />
+      <WhatsAppFab />
     </div>
   );
 }
