@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Calendar, Newspaper,
-  Rocket, GraduationCap, Globe2, Brain, Mail, Youtube, Linkedin, Instagram,
-  ShieldCheck, Zap, DollarSign, IndianRupee, ChevronRight, Play, LayoutDashboard, Building2,
+  Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Newspaper,
+  Rocket, GraduationCap, Globe2, Brain, Mail, MessageCircle,
+  ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart,
 } from "lucide-react";
 
 /* ---------- Owner + external link helpers ---------- */
@@ -15,6 +16,8 @@ const OWNER = {
   youtube: "https://www.youtube.com/@Yashvi-Rawal",
   instagram: "https://www.instagram.com/",
   site: "www.yr.stocketize.com",
+  whatsapp: "https://wa.me/919550541145",
+  whatsappDisplay: "+91 95505 41145",
 };
 const yahooQuote = (ticker: string) =>
   `https://finance.yahoo.com/quote/${encodeURIComponent(ticker.replace(/\./g, "-"))}`;
@@ -25,7 +28,9 @@ const investopedia = (q: string) =>
 import { Sparkline, fmt } from "@/components/sparkline";
 import {
   MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, IPOS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
+  type Shareholder,
 } from "@/lib/market-data";
+import { subscribeToNewsletter } from "@/lib/newsletter.functions";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -656,29 +661,31 @@ function Meta({ k, v, tone }: { k: string; v: string; tone?: "up" | "down" | "n"
 }
 
 /* ---------- Company Profile ---------- */
-/** Indian tickers (dual-listed on NSE & BSE); everything else is US (NYSE/Nasdaq). */
-const INDIAN_TICKERS = new Set([
-  "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "LT", "TATAMOTORS", "ASIANPAINT",
-]);
 type Exchange = "ALL" | "NSE" | "BSE";
 function CompanyProfile() {
   const [q, setQ] = useState("");
   const [exchange, setExchange] = useState<Exchange>("ALL");
-  const [active, setActive] = useState(COMPANIES[0]);
+  // NSE and BSE each show a different subset (BOTH-listed appear on both);
+  // ALL includes globals.
   const filtered = COMPANIES.filter((c) => {
     const matches = c.name.toLowerCase().includes(q.toLowerCase()) || c.ticker.toLowerCase().includes(q.toLowerCase());
     if (!matches) return false;
-    const isIndian = INDIAN_TICKERS.has(c.ticker);
-    if (exchange === "NSE") return isIndian;
-    if (exchange === "BSE") return isIndian;
+    if (exchange === "NSE") return c.exchange === "NSE" || c.exchange === "BOTH";
+    if (exchange === "BSE") return c.exchange === "BSE" || c.exchange === "BOTH";
     return true;
   });
+  const [active, setActive] = useState(COMPANIES[0]);
+  // Keep active in current filter
+  useEffect(() => {
+    if (!filtered.find((c) => c.ticker === active.ticker) && filtered[0]) setActive(filtered[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exchange]);
 
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="Company Intelligence"
         title={<>Deep-Dive <span className="gradient-text">Profiles</span></>}
-        subtitle="Browse listed companies by exchange, search for one, and explore leadership, financials, shareholding and business context." />
+        subtitle="Switch between NSE, BSE and global listings, then explore leadership, financials, shareholding and business context." />
       <div className="grid lg:grid-cols-[320px_1fr] gap-6">
         <div className="glass-strong rounded-2xl p-4">
           <div className="grid grid-cols-3 gap-1 glass rounded-xl p-1 mb-3">
@@ -694,6 +701,9 @@ function CompanyProfile() {
             <input placeholder={`Search ${exchange === "ALL" ? "all" : exchange} companies…`} value={q} onChange={(e) => setQ(e.target.value)}
               className="bg-transparent outline-none text-sm flex-1 min-w-0" />
           </div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground px-1 pb-1">
+            {filtered.length} {exchange === "ALL" ? "listings" : `${exchange} listings`}
+          </div>
           <div className="max-h-[520px] overflow-y-auto space-y-1 pr-1">
             {filtered.length === 0 && (
               <div className="p-4 text-xs text-muted-foreground text-center">No listed companies match this filter.</div>
@@ -704,7 +714,9 @@ function CompanyProfile() {
                 <div className="h-9 w-9 rounded-lg grid place-items-center text-xs font-bold text-white shrink-0" style={{ background: c.color }}>{c.logo}</div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{c.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{c.ticker} • {INDIAN_TICKERS.has(c.ticker) ? "NSE / BSE" : "US"}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {c.ticker} • {c.exchange === "BOTH" ? "NSE / BSE" : c.exchange}
+                  </div>
                 </div>
                 <div className={`text-xs font-mono ${c.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
                   {c.change >= 0 ? "+" : ""}{fmt(c.changePct)}%
@@ -713,6 +725,7 @@ function CompanyProfile() {
             ))}
           </div>
         </div>
+
 
 
         <div className="glass-strong rounded-2xl p-6 lg:p-8">
@@ -757,7 +770,7 @@ function CompanyProfile() {
           <div className="grid sm:grid-cols-2 gap-4 mb-6">
             <div className="glass rounded-xl p-4">
               <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Shareholding pattern</div>
-              <ShareholdingBar />
+              <ShareholdingBar parts={active.shareholding} />
             </div>
             <div className="glass rounded-xl p-4">
               <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Major competitors</div>
@@ -779,18 +792,13 @@ function CompanyProfile() {
   );
 }
 
-function ShareholdingBar() {
-  const parts = [
-    { k: "Promoters", v: 46, c: "var(--teal)" },
-    { k: "FII", v: 22, c: "var(--cyan)" },
-    { k: "DII", v: 18, c: "var(--aqua)" },
-    { k: "Retail", v: 14, c: "var(--lavender)" },
-  ];
+function ShareholdingBar({ parts }: { parts: Shareholder[] }) {
+  const total = parts.reduce((a, p) => a + p.v, 0) || 1;
   return (
     <div>
       <div className="flex h-3 rounded-full overflow-hidden mb-3">
         {parts.map((p) => (
-          <div key={p.k} style={{ width: `${p.v}%`, background: p.c }} />
+          <div key={p.k} style={{ width: `${(p.v / total) * 100}%`, background: p.c }} />
         ))}
       </div>
       <div className="grid grid-cols-2 gap-y-1.5 text-xs">
@@ -798,7 +806,7 @@ function ShareholdingBar() {
           <div key={p.k} className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full" style={{ background: p.c }} />
             <span className="text-muted-foreground">{p.k}</span>
-            <span className="ml-auto font-mono">{p.v}%</span>
+            <span className="ml-auto font-mono">{fmt(p.v)}%</span>
           </div>
         ))}
       </div>
@@ -810,7 +818,7 @@ function ShareholdingBar() {
 function InteractiveChart() {
   const ranges = ["1D", "1W", "1M", "6M", "1Y", "5Y"];
   const [range, setRange] = useState("1M");
-  const [type, setType] = useState<"candle" | "line">("candle");
+  const [type, setType] = useState<"candle" | "line" | "area">("candle");
   const data = useMemo(() => {
     const n = { "1D": 40, "1W": 60, "1M": 90, "6M": 120, "1Y": 160, "5Y": 200 }[range]!;
     const arr: { o: number; c: number; h: number; l: number }[] = [];
@@ -843,6 +851,9 @@ function InteractiveChart() {
             <button onClick={() => setType("line")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${type === "line" ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground"}`}>
               <LineChart className="h-3.5 w-3.5" /> Line
             </button>
+            <button onClick={() => setType("area")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${type === "area" ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground"}`}>
+              <AreaChart className="h-3.5 w-3.5" /> Area
+            </button>
           </div>
           <div className="ml-auto flex flex-wrap gap-2 text-xs text-muted-foreground">
             {["RSI", "MACD", "MA(20)", "MA(50)", "Volume"].map((i) => (
@@ -856,7 +867,7 @@ function InteractiveChart() {
   );
 }
 
-function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: number }[]; type: "candle" | "line" }) {
+function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: number }[]; type: "candle" | "line" | "area" }) {
   const w = 1100, h = 360, pad = 20;
   const all = data.flatMap((d) => [d.h, d.l]);
   const min = Math.min(...all), max = Math.max(...all);
@@ -867,7 +878,7 @@ function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: 
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[300px] sm:h-[380px]">
       <defs>
         <linearGradient id="chartArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.35" />
+          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.5" />
           <stop offset="100%" stopColor="var(--cyan)" stopOpacity="0" />
         </linearGradient>
       </defs>
@@ -875,8 +886,11 @@ function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: 
         <line key={p} x1="0" y1={h * p} x2={w} y2={h * p} stroke="currentColor" strokeOpacity="0.06" strokeDasharray="3 5" />
       ))}
       {type === "line" && (
+        <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
+      )}
+      {type === "area" && (
         <>
-          <path d={`M ${pad},${h} L ${line} L ${w - pad},${h} Z`} fill="url(#chartArea)" />
+          <path d={`M ${pad},${h - pad} L ${line} L ${w - pad},${h - pad} Z`} fill="url(#chartArea)" />
           <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
         </>
       )}
@@ -986,8 +1000,10 @@ function NewsGrid() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {NEWS.map((n, i) => (
           <article key={i} className="glass rounded-2xl overflow-hidden hover-lift group">
-            <div className="relative h-40 overflow-hidden" style={{ background: n.image }}>
-              <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--midnight)]/80 to-transparent" />
+            <div className="relative h-40 overflow-hidden bg-white/5">
+              <img src={n.image} alt={n.title} loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--midnight)]/85 via-[color:var(--midnight)]/20 to-transparent" />
               <div className="absolute top-3 left-3 text-[10px] uppercase tracking-widest bg-white/15 backdrop-blur px-2 py-1 rounded-md font-semibold">{n.category}</div>
               <Newspaper className="absolute bottom-3 right-3 h-8 w-8 text-white/70" />
             </div>
@@ -1291,65 +1307,28 @@ function Mood({ label, value, tone }: { label: string; value: string; tone: "up"
 /* ---------- Newsletter ---------- */
 function Newsletter() {
   const [email, setEmail] = useState("");
-  const [ok, setOk] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "ok" | "err">("idle");
+  const [msg, setMsg] = useState("");
+  const subscribe = useServerFn(subscribeToNewsletter);
 
-  const buildNewsletter = (to: string) => {
-    const subject = `Welcome to Stocketize AI — Your Daily Market Brief`;
-    const body = [
-      `Hi there,`,
-      ``,
-      `Thanks for subscribing to Stocketize AI — you're in!`,
-      ``,
-      `Here's a preview of what lands in your inbox every morning:`,
-      ``,
-      `📈 MARKETS TODAY`,
-      `• NIFTY 50: 24,856 (+0.58%)   • SENSEX: 81,532 (-0.27%)`,
-      `• NASDAQ: 20,114 (+0.94%)     • S&P 500: 5,824 (+0.55%)`,
-      `• Gold: $2,687/oz (+0.54%)    • Crude (WTI): $71.32 (+1.25%)`,
-      ``,
-      `🔥 TOP MOVERS`,
-      `• NVIDIA extends gains on strong Blackwell demand.`,
-      `• Indian IT firms raise FY26 guidance on BFSI deal revival.`,
-      `• Metals under pressure on China demand concerns.`,
-      ``,
-      `🧠 AI MARKET MOOD`,
-      `Cautiously bullish. Breadth positive (62% advancers), VIX low at 14.2.`,
-      `Watch: US CPI print next week + RBI commentary on food inflation.`,
-      ``,
-      `📚 LEARN TODAY`,
-      `"Fundamental vs Technical Analysis — which one should a beginner start with?"`,
-      `Read on the site: https://${OWNER.site}/#learn`,
-      ``,
-      `— ${OWNER.name}`,
-      `Founder, Stocketize AI`,
-      `${OWNER.email} • ${OWNER.linkedin} • ${OWNER.youtube}`,
-      ``,
-      `Educational content only. Not investment advice.`,
-      `You're subscribed as: ${to}`,
-    ].join("\n");
-    return { subject, body };
-  };
-
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes("@")) return;
-    const { subject, body } = buildNewsletter(email);
-    // 1) Notify owner of the new subscriber
-    const notify =
-      `mailto:${OWNER.email}` +
-      `?subject=${encodeURIComponent("New Stocketize AI subscriber")}` +
-      `&body=${encodeURIComponent(`New subscriber: ${email}\nSite: ${OWNER.site}\nDate: ${new Date().toLocaleString()}`)}`;
-    // 2) Compose the welcome newsletter to the subscriber
-    const welcome =
-      `mailto:${email}` +
-      `?cc=${OWNER.email}` +
-      `&subject=${encodeURIComponent(subject)}` +
-      `&body=${encodeURIComponent(body)}`;
-    // Open owner notification in background, welcome in foreground
-    try { window.open(notify, "_blank"); } catch {}
-    window.location.href = welcome;
-    setOk(true);
-    setEmail("");
+    setStatus("sending");
+    try {
+      const res = await subscribe({ data: { email } });
+      if (res.ok) {
+        setStatus("ok");
+        setMsg("✓ You're on the list — your welcome market brief is on the way.");
+        setEmail("");
+      } else {
+        setStatus("err");
+        setMsg(res.error ?? "Something went wrong. Please try again.");
+      }
+    } catch {
+      setStatus("err");
+      setMsg("Network issue — please try again in a moment.");
+    }
   };
 
   return (
@@ -1365,12 +1344,39 @@ function Newsletter() {
           <form onSubmit={onSubmit} className="mt-6 flex flex-col sm:flex-row gap-2 max-w-lg mx-auto">
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required placeholder="you@email.com"
               className="flex-1 h-12 px-4 rounded-xl bg-[color:var(--midnight)]/10 border border-[color:var(--midnight)]/20 placeholder:text-[color:var(--midnight)]/50 outline-none focus:border-[color:var(--midnight)]/60" />
-            <button type="submit" className="h-12 px-6 rounded-xl bg-[color:var(--midnight)] text-white font-semibold hover:opacity-90 transition">Subscribe</button>
+            <button type="submit" disabled={status === "sending"}
+              className="h-12 px-6 rounded-xl bg-[color:var(--midnight)] text-white font-semibold hover:opacity-90 transition disabled:opacity-70">
+              {status === "sending" ? "Subscribing…" : "Subscribe"}
+            </button>
           </form>
-          {ok && <div className="mt-3 text-sm">✓ You're on the list — check your mail app for your welcome brief.</div>}
+          {status === "ok" && <div className="mt-3 text-sm">{msg}</div>}
+          {status === "err" && <div className="mt-3 text-sm text-[color:var(--midnight)]/90">{msg}</div>}
+          <p className="mt-3 text-[11px] text-[color:var(--midnight)]/70">
+            By subscribing you agree to receive market emails from {OWNER.name}. Unsubscribe anytime.
+          </p>
         </div>
       </div>
     </section>
+  );
+}
+
+/* ---------- Floating WhatsApp button ---------- */
+function WhatsAppFab() {
+  return (
+    <a
+      href={OWNER.whatsapp}
+      target="_blank"
+      rel="noreferrer noopener"
+      aria-label="Chat with Stocketize on WhatsApp"
+      className="fixed bottom-6 right-6 z-[90] h-14 w-14 rounded-full grid place-items-center shadow-2xl transition hover:scale-110 group"
+      style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}
+    >
+      <MessageCircle className="h-6 w-6 text-white" strokeWidth={2.4} />
+      <span className="absolute right-full mr-3 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold bg-[color:var(--midnight)] text-white opacity-0 group-hover:opacity-100 transition pointer-events-none">
+        Chat on WhatsApp
+      </span>
+      <span className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ background: "#25D366" }} />
+    </a>
   );
 }
 
@@ -1415,6 +1421,21 @@ function Footer() {
                 <a href={`mailto:${OWNER.email}`} className="text-white hover:text-[color:var(--cyan)] transition break-all">
                   {OWNER.email}
                 </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <MessageCircle className="h-3.5 w-3.5 shrink-0" style={{ color: "#25D366" }} />
+                <a href={OWNER.whatsapp} target="_blank" rel="noreferrer noopener"
+                  className="text-white hover:text-[color:var(--cyan)] transition">
+                  WhatsApp — {OWNER.whatsappDisplay}
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Globe2 className="h-3.5 w-3.5 shrink-0" />
+                <a href={OWNER.linkedin} target="_blank" rel="noreferrer noopener"
+                  className="text-white hover:text-[color:var(--cyan)] transition break-all">LinkedIn</a>
+                <span className="text-white/40">·</span>
+                <a href={OWNER.youtube} target="_blank" rel="noreferrer noopener"
+                  className="text-white hover:text-[color:var(--cyan)] transition">YouTube</a>
               </li>
             </ul>
           </div>
@@ -1470,6 +1491,7 @@ function Testimonials() {
     { q: "I use the ratios section to teach my finance students. Every metric comes with a plain-English explanation, which is rare on Indian sites.", n: "Prof. Meera Kulkarni", r: "MBA Faculty • Mumbai" },
     { q: "Finally an educational platform that clearly says 'this isn't advice'. That honesty is what made me stick around.", n: "Vikram Shah", r: "Chartered Accountant • Ahmedabad" },
     { q: "The IPO tracker and sector heatmap are super useful for weekend research. Clean UI, no clutter, and works well on my phone.", n: "Sneha Reddy", r: "Long-term Investor • Hyderabad" },
+    { q: "The WhatsApp support is a lovely touch. I had a question about the ratios section and got a clear, honest reply within a day — no salesy pitch, just help.", n: "Karan Bhatia", r: "Aspiring Trader • Jaipur" },
   ];
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
@@ -1560,6 +1582,7 @@ function Home() {
         <Newsletter />
       </main>
       <Footer />
+      <WhatsAppFab />
     </div>
   );
 }
