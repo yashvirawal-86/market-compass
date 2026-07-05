@@ -661,29 +661,31 @@ function Meta({ k, v, tone }: { k: string; v: string; tone?: "up" | "down" | "n"
 }
 
 /* ---------- Company Profile ---------- */
-/** Indian tickers (dual-listed on NSE & BSE); everything else is US (NYSE/Nasdaq). */
-const INDIAN_TICKERS = new Set([
-  "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "LT", "TATAMOTORS", "ASIANPAINT",
-]);
 type Exchange = "ALL" | "NSE" | "BSE";
 function CompanyProfile() {
   const [q, setQ] = useState("");
   const [exchange, setExchange] = useState<Exchange>("ALL");
-  const [active, setActive] = useState(COMPANIES[0]);
+  // NSE and BSE each show a different subset (BOTH-listed appear on both);
+  // ALL includes globals.
   const filtered = COMPANIES.filter((c) => {
     const matches = c.name.toLowerCase().includes(q.toLowerCase()) || c.ticker.toLowerCase().includes(q.toLowerCase());
     if (!matches) return false;
-    const isIndian = INDIAN_TICKERS.has(c.ticker);
-    if (exchange === "NSE") return isIndian;
-    if (exchange === "BSE") return isIndian;
+    if (exchange === "NSE") return c.exchange === "NSE" || c.exchange === "BOTH";
+    if (exchange === "BSE") return c.exchange === "BSE" || c.exchange === "BOTH";
     return true;
   });
+  const [active, setActive] = useState(COMPANIES[0]);
+  // Keep active in current filter
+  useEffect(() => {
+    if (!filtered.find((c) => c.ticker === active.ticker) && filtered[0]) setActive(filtered[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exchange]);
 
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="Company Intelligence"
         title={<>Deep-Dive <span className="gradient-text">Profiles</span></>}
-        subtitle="Browse listed companies by exchange, search for one, and explore leadership, financials, shareholding and business context." />
+        subtitle="Switch between NSE, BSE and global listings, then explore leadership, financials, shareholding and business context." />
       <div className="grid lg:grid-cols-[320px_1fr] gap-6">
         <div className="glass-strong rounded-2xl p-4">
           <div className="grid grid-cols-3 gap-1 glass rounded-xl p-1 mb-3">
@@ -699,6 +701,9 @@ function CompanyProfile() {
             <input placeholder={`Search ${exchange === "ALL" ? "all" : exchange} companies…`} value={q} onChange={(e) => setQ(e.target.value)}
               className="bg-transparent outline-none text-sm flex-1 min-w-0" />
           </div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground px-1 pb-1">
+            {filtered.length} {exchange === "ALL" ? "listings" : `${exchange} listings`}
+          </div>
           <div className="max-h-[520px] overflow-y-auto space-y-1 pr-1">
             {filtered.length === 0 && (
               <div className="p-4 text-xs text-muted-foreground text-center">No listed companies match this filter.</div>
@@ -709,7 +714,9 @@ function CompanyProfile() {
                 <div className="h-9 w-9 rounded-lg grid place-items-center text-xs font-bold text-white shrink-0" style={{ background: c.color }}>{c.logo}</div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{c.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{c.ticker} • {INDIAN_TICKERS.has(c.ticker) ? "NSE / BSE" : "US"}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {c.ticker} • {c.exchange === "BOTH" ? "NSE / BSE" : c.exchange}
+                  </div>
                 </div>
                 <div className={`text-xs font-mono ${c.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
                   {c.change >= 0 ? "+" : ""}{fmt(c.changePct)}%
@@ -718,6 +725,7 @@ function CompanyProfile() {
             ))}
           </div>
         </div>
+
 
 
         <div className="glass-strong rounded-2xl p-6 lg:p-8">
