@@ -851,6 +851,9 @@ function InteractiveChart() {
             <button onClick={() => setType("line")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${type === "line" ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground"}`}>
               <LineChart className="h-3.5 w-3.5" /> Line
             </button>
+            <button onClick={() => setType("area")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${type === "area" ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground"}`}>
+              <AreaChart className="h-3.5 w-3.5" /> Area
+            </button>
           </div>
           <div className="ml-auto flex flex-wrap gap-2 text-xs text-muted-foreground">
             {["RSI", "MACD", "MA(20)", "MA(50)", "Volume"].map((i) => (
