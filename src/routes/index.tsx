@@ -1422,6 +1422,21 @@ function Footer() {
                   {OWNER.email}
                 </a>
               </li>
+              <li className="flex items-center gap-1.5">
+                <MessageCircle className="h-3.5 w-3.5 shrink-0" style={{ color: "#25D366" }} />
+                <a href={OWNER.whatsapp} target="_blank" rel="noreferrer noopener"
+                  className="text-white hover:text-[color:var(--cyan)] transition">
+                  WhatsApp — {OWNER.whatsappDisplay}
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <Globe2 className="h-3.5 w-3.5 shrink-0" />
+                <a href={OWNER.linkedin} target="_blank" rel="noreferrer noopener"
+                  className="text-white hover:text-[color:var(--cyan)] transition break-all">LinkedIn</a>
+                <span className="text-white/40">·</span>
+                <a href={OWNER.youtube} target="_blank" rel="noreferrer noopener"
+                  className="text-white hover:text-[color:var(--cyan)] transition">YouTube</a>
+              </li>
             </ul>
           </div>
         </div>
