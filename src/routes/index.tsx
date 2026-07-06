@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useAuth } from "@/lib/useAuth";
 import {
   Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Newspaper,
   Rocket, GraduationCap, Globe2, Brain, Mail, MessageCircle, Phone,
-  ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart,
+  ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart, LogOut,
 } from "lucide-react";
 
 /* ---------- Owner + external link helpers ---------- */
@@ -96,11 +97,20 @@ function useTheme() {
 function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
   const nav = ["Home", "Markets", "Companies", "News", "About"];
   const [scrolled, setScrolled] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 20);
     on(); window.addEventListener("scroll", on);
     return () => window.removeEventListener("scroll", on);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate({ to: "/auth" });
+  };
+
   return (
     <header className={`fixed top-0 inset-x-0 z-50 transition-all ${scrolled ? "py-2" : "py-4"}`}>
       <div className={`mx-auto max-w-7xl px-4 sm:px-6 transition-all`}>
@@ -128,15 +138,25 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
 
           <SmartSearch />
 
-
           <button onClick={toggle} aria-label="Toggle theme"
             className="h-9 w-9 grid place-items-center rounded-xl glass hover:border-[color:var(--cyan)]/40 transition">
             {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
 
-          <LoginButton />
-
-          <SignUpButton />
+          {user && (
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:block text-xs text-white/40 max-w-[120px] truncate">
+                {user.user_metadata?.full_name || user.email}
+              </span>
+              <button
+                onClick={handleSignOut}
+                title="Sign out"
+                className="h-9 px-3 flex items-center gap-1.5 rounded-xl glass hover:border-red-500/40 hover:text-red-400 text-sm font-semibold transition shrink-0">
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Sign out</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
@@ -1547,6 +1567,30 @@ function FAQ() {
 /* ---------- Page ---------- */
 function Home() {
   const { light, toggle } = useTheme();
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate({ to: "/auth" });
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#060a14] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center animate-pulse">
+            <Activity className="h-5 w-5 text-[#060a14]" />
+          </div>
+          <p className="text-white/30 text-sm">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   return (
     <div className="min-h-screen">
       <Header light={light} toggle={toggle} />
