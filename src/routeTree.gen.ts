@@ -13,6 +13,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AffiliateDisclosureRouteImport } from './routes/affiliate-disclosure'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -36,6 +37,11 @@ const DisclaimerRoute = DisclaimerRouteImport.update({
   path: '/disclaimer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AffiliateDisclosureRoute = AffiliateDisclosureRouteImport.update({
   id: '/affiliate-disclosure',
   path: '/affiliate-disclosure',
@@ -50,6 +56,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/affiliate-disclosure': typeof AffiliateDisclosureRoute
+  '/auth': typeof AuthRoute
   '/disclaimer': typeof DisclaimerRoute
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/affiliate-disclosure': typeof AffiliateDisclosureRoute
+  '/auth': typeof AuthRoute
   '/disclaimer': typeof DisclaimerRoute
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/affiliate-disclosure': typeof AffiliateDisclosureRoute
+  '/auth': typeof AuthRoute
   '/disclaimer': typeof DisclaimerRoute
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -77,6 +86,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/affiliate-disclosure'
+    | '/auth'
     | '/disclaimer'
     | '/privacy'
     | '/sitemap.xml'
@@ -85,6 +95,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/affiliate-disclosure'
+    | '/auth'
     | '/disclaimer'
     | '/privacy'
     | '/sitemap.xml'
@@ -93,6 +104,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/affiliate-disclosure'
+    | '/auth'
     | '/disclaimer'
     | '/privacy'
     | '/sitemap.xml'
@@ -102,6 +114,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AffiliateDisclosureRoute: typeof AffiliateDisclosureRoute
+  AuthRoute: typeof AuthRoute
   DisclaimerRoute: typeof DisclaimerRoute
   PrivacyRoute: typeof PrivacyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -138,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DisclaimerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/affiliate-disclosure': {
       id: '/affiliate-disclosure'
       path: '/affiliate-disclosure'
@@ -158,6 +178,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AffiliateDisclosureRoute: AffiliateDisclosureRoute,
+  AuthRoute: AuthRoute,
   DisclaimerRoute: DisclaimerRoute,
   PrivacyRoute: PrivacyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
@@ -166,3 +187,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
