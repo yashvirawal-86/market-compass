@@ -1,7 +1,4 @@
-{
-title:"Commodities"
-...
-}
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -1557,7 +1554,10 @@ function Home() {
     </div>
   );
 }
-
+{
+title:"Commodities"
+...
+}
 
 
 
