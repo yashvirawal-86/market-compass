@@ -1554,10 +1554,6 @@ function Home() {
     </div>
   );
 }
-{
-title:"Commodities"
-...
-}
 
 
 
