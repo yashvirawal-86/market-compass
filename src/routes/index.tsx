@@ -1,3 +1,6 @@
+bash
+
+mkdir -p /home/claude && cat > /home/claude/index.tsx << 'ENDOFFILE'
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -9,7 +12,6 @@ import {
   ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart, LogOut,
 } from "lucide-react";
 
-/* ---------- Owner + external link helpers ---------- */
 const OWNER = {
   name: "Yashvi Rawal",
   email: "yashvirawal86@gmail.com",
@@ -29,17 +31,42 @@ const investopedia = (q: string) =>
   `https://www.investopedia.com/search?q=${encodeURIComponent(q)}`;
 import { Sparkline, fmt } from "@/components/sparkline";
 import {
-  MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, IPOS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
+  MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
   type Shareholder,
 } from "@/lib/market-data";
 import { subscribeToNewsletter } from "@/lib/newsletter.functions";
+
+/* ---------- 18 IPOs (6 Upcoming, 6 Open, 6 Closed) ---------- */
+const ALL_IPOS = [
+  // UPCOMING
+  { name: "Swiggy Ltd", date: "Jul 18 – Jul 20", band: "₹390–410", gmp: "+₹65", sub: "—", status: "Upcoming", color: "#f97316" },
+  { name: "Ola Electric", date: "Jul 19 – Jul 21", band: "₹72–76", gmp: "+₹18", sub: "—", status: "Upcoming", color: "#8b5cf6" },
+  { name: "FirstCry", date: "Jul 22 – Jul 24", band: "₹440–465", gmp: "+₹48", sub: "—", status: "Upcoming", color: "#ec4899" },
+  { name: "Afcons Infra", date: "Jul 25 – Jul 27", band: "₹440–463", gmp: "+₹30", sub: "—", status: "Upcoming", color: "#06b6d4" },
+  { name: "Vishal Mega Mart", date: "Jul 28 – Jul 30", band: "₹74–78", gmp: "+₹12", sub: "—", status: "Upcoming", color: "#10b981" },
+  { name: "Mobikwik", date: "Aug 01 – Aug 03", band: "₹235–279", gmp: "+₹22", sub: "—", status: "Upcoming", color: "#f59e0b" },
+  // OPEN
+  { name: "Bajaj Housing Finance", date: "Jul 09 – Jul 11", band: "₹66–70", gmp: "+₹52", sub: "8.2x", status: "Open", color: "#3b82f6" },
+  { name: "Waaree Energies", date: "Jul 08 – Jul 10", band: "₹1427–1503", gmp: "+₹210", sub: "6.7x", status: "Open", color: "#22c55e" },
+  { name: "Hyundai India", date: "Jul 09 – Jul 12", band: "₹1865–1960", gmp: "+₹95", sub: "2.4x", status: "Open", color: "#ef4444" },
+  { name: "NTPC Green Energy", date: "Jul 10 – Jul 12", band: "₹102–108", gmp: "+₹28", sub: "4.1x", status: "Open", color: "#14b8a6" },
+  { name: "Sagility India", date: "Jul 09 – Jul 11", band: "₹28–30", gmp: "+₹8", sub: "3.2x", status: "Open", color: "#a855f7" },
+  { name: "Acme Solar", date: "Jul 10 – Jul 13", band: "₹275–289", gmp: "+₹35", sub: "5.8x", status: "Open", color: "#f97316" },
+  // CLOSED
+  { name: "Brainbees Solutions", date: "Jun 23 – Jun 25", band: "₹440–465", gmp: "+₹62", sub: "12.5x", status: "Closed", color: "#ec4899" },
+  { name: "Emcure Pharma", date: "Jun 20 – Jun 22", band: "₹960–1008", gmp: "+₹180", sub: "9.8x", status: "Closed", color: "#06b6d4" },
+  { name: "Ola Cabs", date: "Jun 18 – Jun 20", band: "₹72–76", gmp: "+₹14", sub: "4.3x", status: "Closed", color: "#8b5cf6" },
+  { name: "Vraj Iron & Steel", date: "Jun 17 – Jun 19", band: "₹195–207", gmp: "+₹45", sub: "17.2x", status: "Closed", color: "#f59e0b" },
+  { name: "Stanley Lifestyles", date: "Jun 14 – Jun 18", band: "₹351–369", gmp: "+₹55", sub: "7.6x", status: "Closed", color: "#10b981" },
+  { name: "DEE Development", date: "Jun 12 – Jun 14", band: "₹193–203", gmp: "+₹28", sub: "5.1x", status: "Closed", color: "#ef4444" },
+];
 
 export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
     meta: [
       { title: "Stocketize AI — Indian Stock Market Intelligence, News & Learning" },
-      { name: "description", content: "Live NSE & BSE market data, Nifty 50 & Sensex, company deep dives, IPOs, mutual funds, financial ratios and beginner-friendly investing education. Educational only — not financial advice." },
+      { name: "description", content: "Live NSE & BSE market data, Nifty 50 & Sensex, company deep dives, IPOs, mutual funds, financial ratios and beginner-friendly investing education." },
       { name: "keywords", content: "Indian stock market, NSE, BSE, Nifty 50, Sensex, IPO, mutual funds, share market news, stock analysis, investing for beginners, Stocketize AI" },
       { property: "og:type", content: "website" },
       { property: "og:title", content: "Stocketize AI — Indian Stock Market Intelligence" },
@@ -47,49 +74,15 @@ export const Route = createFileRoute("/")({
       { property: "og:site_name", content: "Stocketize AI" },
       { property: "og:url", content: "/" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Stocketize AI — Indian Stock Market Intelligence" },
-      { name: "twitter:description", content: "Live markets, company deep dives and beginner-friendly education." },
     ],
     links: [{ rel: "canonical", href: "/" }],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "WebSite",
-          name: "Stocketize AI",
-          url: "https://www.yr.stocketize.com/",
-          potentialAction: {
-            "@type": "SearchAction",
-            target: "https://www.yr.stocketize.com/?q={search_term_string}",
-            "query-input": "required name=search_term_string",
-          },
-        }),
-      },
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: [
-            { "@type": "Question", name: "Is Stocketize AI giving me financial advice?", acceptedAnswer: { "@type": "Answer", text: "No. All content is AI-generated and strictly for education and information only. Always consult a SEBI-registered advisor before investing." } },
-            { "@type": "Question", name: "How current is the market data on Stocketize AI?", acceptedAnswer: { "@type": "Answer", text: "The platform simulates realistic Indian and global market data for demonstration. When connected to a live feed, indices, prices and news update automatically throughout market hours." } },
-            { "@type": "Question", name: "Do I need a paid account to use Stocketize AI?", acceptedAnswer: { "@type": "Answer", text: "No. Reading market data, company profiles, education and news is completely free. The newsletter is also free." } },
-            { "@type": "Question", name: "How often is the newsletter sent?", acceptedAnswer: { "@type": "Answer", text: "Subscribers receive a welcome brief immediately, a daily morning market update, and a longer weekend deep-dive." } },
-            { "@type": "Question", name: "I'm a complete beginner — where should I start?", acceptedAnswer: { "@type": "Answer", text: "Head to the Investor Education Hub on the home page and start with 'What is the Stock Market?' followed by 'How to Start Investing'." } },
-          ],
-        }),
-      },
-    ],
   }),
 });
 
-/* ---------- Theme toggle ---------- */
+/* ---------- Theme ---------- */
 function useTheme() {
   const [light, setLight] = useState(false);
-  useEffect(() => {
-    document.documentElement.classList.toggle("light", light);
-  }, [light]);
+  useEffect(() => { document.documentElement.classList.toggle("light", light); }, [light]);
   return { light, toggle: () => setLight((x) => !x) };
 }
 
@@ -99,21 +92,15 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 20);
     on(); window.addEventListener("scroll", on);
     return () => window.removeEventListener("scroll", on);
   }, []);
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate({ to: "/auth" });
-  };
-
+  const handleSignOut = async () => { await signOut(); navigate({ to: "/auth" }); };
   return (
     <header className={`fixed top-0 inset-x-0 z-50 transition-all ${scrolled ? "py-2" : "py-4"}`}>
-      <div className={`mx-auto max-w-7xl px-4 sm:px-6 transition-all`}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className={`glass-strong rounded-2xl px-3 sm:px-5 py-2.5 flex items-center gap-3 ${scrolled ? "glow-cyan" : ""}`}>
           <a href="#home" className="flex items-center gap-2 shrink-0">
             <div className="relative h-9 w-9 rounded-xl gradient-brand grid place-items-center glow-cyan">
@@ -124,36 +111,21 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
               <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Market Intelligence</div>
             </div>
           </a>
-
           <nav className="hidden lg:flex items-center gap-1 ml-4">
             {nav.map((n) => (
-              <a key={n} href={`#${n.toLowerCase()}`}
-                 className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition">
-                {n}
-              </a>
+              <a key={n} href={`#${n.toLowerCase()}`} className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition">{n}</a>
             ))}
           </nav>
-
           <div className="flex-1" />
-
           <SmartSearch />
-
-          <button onClick={toggle} aria-label="Toggle theme"
-            className="h-9 w-9 grid place-items-center rounded-xl glass hover:border-[color:var(--cyan)]/40 transition">
+          <button onClick={toggle} aria-label="Toggle theme" className="h-9 w-9 grid place-items-center rounded-xl glass hover:border-[color:var(--cyan)]/40 transition">
             {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
-
           {user && (
             <div className="flex items-center gap-2">
-              <span className="hidden sm:block text-xs text-white/40 max-w-[120px] truncate">
-                {user.user_metadata?.full_name || user.email}
-              </span>
-              <button
-                onClick={handleSignOut}
-                title="Sign out"
-                className="h-9 px-3 flex items-center gap-1.5 rounded-xl glass hover:border-red-500/40 hover:text-red-400 text-sm font-semibold transition shrink-0">
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign out</span>
+              <span className="hidden sm:block text-xs text-white/40 max-w-[120px] truncate">{user.user_metadata?.full_name || user.email}</span>
+              <button onClick={handleSignOut} title="Sign out" className="h-9 px-3 flex items-center gap-1.5 rounded-xl glass hover:border-red-500/40 hover:text-red-400 text-sm font-semibold transition shrink-0">
+                <LogOut className="h-4 w-4" /><span className="hidden sm:inline">Sign out</span>
               </button>
             </div>
           )}
@@ -163,239 +135,77 @@ function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
   );
 }
 
-/* ---------- Login (Name + Mobile only) ---------- */
-function LoginButton() {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", phone: "" });
-  const [sent, setSent] = useState(false);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const subject = `Stocketize AI — Login request from ${form.name}`;
-    const body = `Name: ${form.name}\nMobile: ${form.phone}\nDate: ${new Date().toLocaleString()}`;
-    window.location.href = `mailto:${OWNER.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setSent(true);
-    setTimeout(() => { setOpen(false); setSent(false); setForm({ name: "", phone: "" }); }, 1200);
-  };
-
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="h-9 px-4 rounded-xl glass hover:border-[color:var(--cyan)]/40 text-sm font-semibold transition shrink-0">
-        Login
-      </button>
-      {open && (
-        <Modal onClose={() => setOpen(false)}>
-          <div className="mb-5">
-            <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Welcome back</div>
-            <h3 className="text-2xl font-bold leading-tight">Log in to <span className="gradient-text">Stocketize AI</span></h3>
-            <p className="text-sm text-muted-foreground mt-1">Enter the same name and mobile number you used when signing up.</p>
-          </div>
-          <form onSubmit={submit} className="space-y-3">
-            <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Jane Doe" required />
-            <Field label="Mobile number" type="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" required />
-            <button type="submit" className="w-full h-11 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
-              {sent ? "✓ Sent" : "Log in"}
-            </button>
-          </form>
-        </Modal>
-      )}
-    </>
-  );
-}
-
-/* ---------- Sign Up ---------- */
-function SignUpButton() {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", purpose: "" });
-  const [agreePrivacy, setAgreePrivacy] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [sent, setSent] = useState(false);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!agreePrivacy || !agreeTerms) return;
-    const subject = `New Stocketize AI Sign Up — ${form.name}`;
-    const body = [
-      `A new visitor just signed up on Stocketize AI:`,
-      ``,
-      `Name:      ${form.name}`,
-      `Email:     ${form.email}`,
-      `Contact:   ${form.phone}`,
-      `Purpose:   ${form.purpose}`,
-      ``,
-      `Accepted Privacy Policy: Yes`,
-      `Accepted Terms & Conditions: Yes`,
-      ``,
-      `Date:      ${new Date().toLocaleString()}`,
-      `Site:      ${OWNER.site}`,
-    ].join("\n");
-    window.location.href =
-      `mailto:${OWNER.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setSent(true);
-    setTimeout(() => {
-      setOpen(false); setSent(false);
-      setForm({ name: "", email: "", phone: "", purpose: "" });
-      setAgreePrivacy(false); setAgreeTerms(false);
-    }, 1200);
-  };
-
-  const canSubmit = agreePrivacy && agreeTerms;
-
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="h-9 px-4 rounded-xl gradient-brand text-[color:var(--midnight)] text-sm font-semibold hover:opacity-90 transition shrink-0">
-        Sign Up
-      </button>
-      {open && (
-        <Modal onClose={() => setOpen(false)}>
-          <div className="mb-5">
-            <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] font-semibold mb-2">Join Stocketize AI</div>
-            <h3 className="text-2xl font-bold leading-tight">Create your <span className="gradient-text">free account</span></h3>
-            <p className="text-sm text-muted-foreground mt-1">Tell us a bit about yourself — we'll get you set up.</p>
-          </div>
-          <form onSubmit={submit} className="space-y-3">
-            <Field label="Full name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} placeholder="Jane Doe" required />
-            <Field label="Email address" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} placeholder="you@email.com" required />
-            <Field label="Contact number" type="tel" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} placeholder="+91 98765 43210" required />
-            <div>
-              <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">Purpose of visit</label>
-              <textarea required rows={3} value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-                placeholder="e.g. learning about the stock market, tracking my portfolio, researching companies…"
-                className="mt-1 w-full px-3 py-2 rounded-xl glass bg-transparent border border-white/10 focus:border-[color:var(--cyan)]/50 outline-none text-sm resize-none" />
-            </div>
-
-            <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
-              <input type="checkbox" required checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-[color:var(--cyan)] shrink-0" />
-              <span>I have read and agree to the{" "}
-                <Link to="/privacy" target="_blank" className="text-[color:var(--cyan)] hover:underline">Privacy Policy</Link>.
-              </span>
-            </label>
-            <label className="flex items-start gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
-              <input type="checkbox" required checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-[color:var(--cyan)] shrink-0" />
-              <span>I accept the{" "}
-                <Link to="/terms" target="_blank" className="text-[color:var(--cyan)] hover:underline">Terms &amp; Conditions</Link>{" "}
-                and the{" "}
-                <Link to="/disclaimer" target="_blank" className="text-[color:var(--cyan)] hover:underline">Disclaimer</Link>.
-              </span>
-            </label>
-
-            <button type="submit" disabled={!canSubmit}
-              className="w-full h-11 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed">
-              {sent ? "✓ Submitted" : "Create Account"}
-            </button>
-            {!canSubmit && (
-              <p className="text-[11px] text-muted-foreground text-center">Please accept both agreements to continue.</p>
-            )}
-          </form>
-        </Modal>
-      )}
-    </>
-  );
-}
-
 function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center p-4 bg-[color:var(--midnight)]/70 backdrop-blur-sm animate-in fade-in"
-         onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()}
-           className="glass-strong rounded-2xl w-full max-w-md p-6 sm:p-8 relative">
-        <button aria-label="Close" onClick={onClose}
-          className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 transition text-muted-foreground">✕</button>
+    <div className="fixed inset-0 z-[100] grid place-items-center p-4 bg-[color:var(--midnight)]/70 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="glass-strong rounded-2xl w-full max-w-md p-6 sm:p-8 relative">
+        <button aria-label="Close" onClick={onClose} className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 transition text-muted-foreground">✕</button>
         {children}
       </div>
     </div>
   );
 }
 
-/* ---------- Smart site-wide search ---------- */
+/* ---------- Smart Search ---------- */
 function SmartSearch() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
+    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
-
   type Hit = { label: string; sub: string; type: string; href: string; external?: boolean };
   const results: Hit[] = useMemo(() => {
     const term = q.trim().toLowerCase();
     if (!term) return [];
     const hits: Hit[] = [];
     COMPANIES.forEach((c) => {
-      if (c.name.toLowerCase().includes(term) || c.ticker.toLowerCase().includes(term) || c.sector.toLowerCase().includes(term)) {
+      if (c.name.toLowerCase().includes(term) || c.ticker.toLowerCase().includes(term) || c.sector.toLowerCase().includes(term))
         hits.push({ label: c.name, sub: `${c.ticker} • ${c.sector}`, type: "Company", href: "/#companies" });
-      }
     });
     SECTORS.forEach((s) => {
       if (s.name.toLowerCase().includes(term)) hits.push({ label: s.name, sub: "Sector heatmap", type: "Sector", href: "/#markets" });
     });
     NEWS.forEach((n) => {
-      if (n.title.toLowerCase().includes(term) || n.category.toLowerCase().includes(term)) {
+      if (n.title.toLowerCase().includes(term) || n.category.toLowerCase().includes(term))
         hits.push({ label: n.title, sub: `${n.source} • ${n.category}`, type: "News", href: googleNews(n.title), external: true });
-      }
     });
-    IPOS.forEach((i) => {
+    ALL_IPOS.forEach((i) => {
       if (i.name.toLowerCase().includes(term)) hits.push({ label: i.name, sub: `IPO • ${i.status} • ${i.date}`, type: "IPO", href: "/#ipos" });
     });
     FUNDS.forEach((f) => {
-      if (f.name.toLowerCase().includes(term) || f.category.toLowerCase().includes(term)) {
+      if (f.name.toLowerCase().includes(term) || f.category.toLowerCase().includes(term))
         hits.push({ label: f.name, sub: `Fund • ${f.category}`, type: "Fund", href: "/#funds" });
-      }
     });
     RATIOS.forEach((r) => {
-      if (r.name.toLowerCase().includes(term) || r.explain.toLowerCase().includes(term)) {
+      if (r.name.toLowerCase().includes(term) || r.explain.toLowerCase().includes(term))
         hits.push({ label: r.name, sub: "Financial ratio", type: "Learn", href: investopedia(r.name), external: true });
-      }
-    });
-    const edu = [
-      "What is the Stock Market?", "How to Start Investing", "Types of Stocks",
-      "Fundamental Analysis", "Technical Analysis", "Risk Management",
-      "Investment Strategies", "Options & Derivatives 101",
-    ];
-    edu.forEach((e) => {
-      if (e.toLowerCase().includes(term)) hits.push({ label: e, sub: "Education", type: "Learn", href: "/#learn" });
     });
     return hits.slice(0, 8);
   }, [q]);
-
   return (
     <div ref={ref} className="relative hidden md:block">
       <div className="flex items-center gap-2 glass rounded-xl px-3 py-1.5 min-w-0 w-64">
         <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-        <input
-          value={q}
-          onChange={(e) => { setQ(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          placeholder="Search companies, sectors, IPOs…"
-          className="bg-transparent outline-none text-sm min-w-0 flex-1 placeholder:text-muted-foreground/70" />
+        <input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)}
+          placeholder="Search companies, sectors, IPOs…" className="bg-transparent outline-none text-sm min-w-0 flex-1 placeholder:text-muted-foreground/70" />
       </div>
       {open && q.trim() && (
         <div className="absolute right-0 mt-2 w-[420px] max-w-[92vw] glass-strong rounded-2xl p-2 shadow-2xl z-[80] max-h-[70vh] overflow-y-auto">
-          {results.length === 0 ? (
-            <div className="p-4 text-sm text-muted-foreground text-center">No matches for "{q}".</div>
-          ) : results.map((r, i) => (
-            <a key={i} href={r.href} target={r.external ? "_blank" : undefined} rel={r.external ? "noreferrer noopener" : undefined}
-               onClick={() => setOpen(false)}
-               className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition">
-              <span className="text-[10px] uppercase tracking-widest text-[color:var(--cyan)] font-semibold shrink-0 mt-0.5 w-14">{r.type}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium truncate">{r.label}</span>
-                <span className="block text-[11px] text-muted-foreground truncate">{r.sub}</span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-            </a>
-          ))}
+          {results.length === 0 ? <div className="p-4 text-sm text-muted-foreground text-center">No matches for "{q}".</div>
+            : results.map((r, i) => (
+              <a key={i} href={r.href} target={r.external ? "_blank" : undefined} rel={r.external ? "noreferrer noopener" : undefined}
+                onClick={() => setOpen(false)} className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition">
+                <span className="text-[10px] uppercase tracking-widest text-[color:var(--cyan)] font-semibold shrink-0 mt-0.5 w-14">{r.type}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium truncate">{r.label}</span>
+                  <span className="block text-[11px] text-muted-foreground truncate">{r.sub}</span>
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              </a>
+            ))}
         </div>
       )}
     </div>
@@ -407,13 +217,11 @@ function Field({ label, value, onChange, type = "text", placeholder, required }:
   return (
     <div>
       <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">{label}</label>
-      <input type={type} required={required} placeholder={placeholder} value={value}
-        onChange={(e) => onChange(e.target.value)}
+      <input type={type} required={required} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)}
         className="mt-1 w-full h-11 px-3 rounded-xl glass bg-transparent border border-white/10 focus:border-[color:var(--cyan)]/50 outline-none text-sm" />
     </div>
   );
 }
-
 
 /* ---------- Hero ---------- */
 function Hero() {
@@ -423,21 +231,13 @@ function Hero() {
       <div className="absolute inset-0 animate-grid opacity-30 pointer-events-none" />
       <div className="absolute -top-20 -right-20 h-96 w-96 rounded-full bg-[color:var(--cyan)]/20 blur-[120px] pointer-events-none" />
       <div className="absolute top-40 -left-20 h-96 w-96 rounded-full bg-[color:var(--aqua)]/15 blur-[120px] pointer-events-none" />
-
-      {/* Floating candlesticks */}
       <div className="absolute inset-0 pointer-events-none">
-        {[
-          { l: "12%", t: "22%", d: "0s" },
-          { l: "82%", t: "28%", d: "1.5s" },
-          { l: "18%", t: "70%", d: "3s" },
-          { l: "88%", t: "68%", d: "2s" },
-        ].map((p, i) => (
+        {[{ l: "12%", t: "22%", d: "0s" }, { l: "82%", t: "28%", d: "1.5s" }, { l: "18%", t: "70%", d: "3s" }, { l: "88%", t: "68%", d: "2s" }].map((p, i) => (
           <div key={i} className="animate-float absolute opacity-40" style={{ left: p.l, top: p.t, animationDelay: p.d }}>
             <CandlestickChart className="h-10 w-10 text-[color:var(--cyan)]" />
           </div>
         ))}
       </div>
-
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <div className="grid lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
           <div>
@@ -446,13 +246,11 @@ function Hero() {
               Live Market Data • Educational Platform
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05]">
-              Real-Time Stock Market{" "}
-              <span className="gradient-text">Intelligence</span> for Smarter Learning
+              Real-Time Stock Market <span className="gradient-text">Intelligence</span> for Smarter Learning
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-xl">
               Track live markets, discover company insights, analyze financial data, and stay updated with breaking market news — all in one place.
             </p>
-
             <div className="mt-8 flex flex-wrap gap-3">
               <a href="#markets" className="group inline-flex items-center gap-2 h-12 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition glow-cyan">
                 Explore Markets <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" />
@@ -461,13 +259,8 @@ function Hero() {
                 <LayoutDashboard className="h-4 w-4" /> Live Dashboard
               </a>
             </div>
-
             <div className="mt-10 grid grid-cols-3 gap-3 max-w-md">
-              {[
-                { k: "10K+", v: "Instruments" },
-                { k: "25+", v: "Global Markets" },
-                { k: "Live", v: "Data Refresh" },
-              ].map((s) => (
+              {[{ k: "10K+", v: "Instruments" }, { k: "25+", v: "Global Markets" }, { k: "Live", v: "Data Refresh" }].map((s) => (
                 <div key={s.v} className="glass rounded-xl px-4 py-3">
                   <div className="text-lg sm:text-xl font-bold gradient-text">{s.k}</div>
                   <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{s.v}</div>
@@ -475,8 +268,6 @@ function Hero() {
               ))}
             </div>
           </div>
-
-          {/* Hero chart card */}
           <div className="relative">
             <div className="glass-strong rounded-3xl p-5 hover-lift">
               <div className="flex items-center justify-between mb-4">
@@ -497,11 +288,7 @@ function Hero() {
               </div>
               <HeroChart />
               <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                {[
-                  { k: "Open", v: "24,714" },
-                  { k: "High", v: "24,912" },
-                  { k: "Low", v: "24,689" },
-                ].map((x) => (
+                {[{ k: "Open", v: "24,714" }, { k: "High", v: "24,912" }, { k: "Low", v: "24,689" }].map((x) => (
                   <div key={x.k} className="glass rounded-lg py-2">
                     <div className="text-[10px] uppercase text-muted-foreground">{x.k}</div>
                     <div className="font-mono text-sm">{x.v}</div>
@@ -516,8 +303,6 @@ function Hero() {
           </div>
         </div>
       </div>
-
-      {/* Ticker */}
       <div className="mt-16 relative overflow-hidden border-y border-white/10 py-3 glass">
         <div className="flex gap-8 animate-ticker whitespace-nowrap">
           {tickers.map((t, i) => (
@@ -538,8 +323,7 @@ function Hero() {
 
 function HeroChart() {
   const pts = useMemo(() => {
-    const arr: number[] = [];
-    let v = 100;
+    const arr: number[] = []; let v = 100;
     for (let i = 0; i < 60; i++) { v = v * (1 + (Math.random() - 0.48) * 0.02); arr.push(v); }
     return arr;
   }, []);
@@ -567,7 +351,6 @@ function HeroChart() {
   );
 }
 
-/* ---------- Section title ---------- */
 function SectionTitle({ eyebrow, title, subtitle, id }: { eyebrow?: string; title: React.ReactNode; subtitle?: string; id?: string }) {
   return (
     <div id={id} className="mb-10 max-w-3xl">
@@ -578,41 +361,98 @@ function SectionTitle({ eyebrow, title, subtitle, id }: { eyebrow?: string; titl
   );
 }
 
-/* ---------- Live Dashboard ---------- */
+/* ---------- Live Dashboard with real data attempt ---------- */
+type LiveQuote = { symbol: string; name: string; price: number; change: number; changePct: number; high: number; low: number; };
+
 function LiveDashboard() {
+  const [quotes, setQuotes] = useState<LiveQuote[]>([]);
+  const [lastUpdate, setLastUpdate] = useState("");
+  const [isLive, setIsLive] = useState(false);
   const [tick, setTick] = useState(0);
-  useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), 3500); return () => clearInterval(id); }, []);
+
+  const SYMBOLS_META: Record<string, string> = {
+    "^NSEI": "NIFTY 50", "^BSESN": "SENSEX", "^NSEBANK": "BANK NIFTY",
+    "^CNXIT": "NIFTY IT", "^DJI": "Dow Jones", "^IXIC": "NASDAQ",
+    "^GSPC": "S&P 500", "GC=F": "Gold", "CL=F": "Crude Oil", "USDINR=X": "USD/INR",
+  };
+
+  const tryFetchLive = async () => {
+    try {
+      const syms = Object.keys(SYMBOLS_META).join(",");
+      const res = await fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${syms}&fields=regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketDayHigh,regularMarketDayLow,shortName`,
+        { headers: { "User-Agent": "Mozilla/5.0" } }
+      );
+      if (!res.ok) throw new Error();
+      const json = await res.json();
+      const results = json?.quoteResponse?.result ?? [];
+      if (results.length > 0) {
+        setQuotes(results.map((q: any) => ({
+          symbol: q.symbol,
+          name: SYMBOLS_META[q.symbol] ?? q.shortName ?? q.symbol,
+          price: q.regularMarketPrice ?? 0,
+          change: q.regularMarketChange ?? 0,
+          changePct: q.regularMarketChangePercent ?? 0,
+          high: q.regularMarketDayHigh ?? 0,
+          low: q.regularMarketDayLow ?? 0,
+        })));
+        setIsLive(true);
+        setLastUpdate(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+      }
+    } catch {
+      setIsLive(false);
+    }
+  };
+
+  useEffect(() => {
+    tryFetchLive();
+    const liveId = setInterval(tryFetchLive, 60_000);
+    const tickId = setInterval(() => setTick((t) => t + 1), 3500);
+    return () => { clearInterval(liveId); clearInterval(tickId); };
+  }, []);
+
+  const displayData = quotes.length > 0
+    ? quotes
+    : MARKET_INDICES.map((m) => ({
+        symbol: m.symbol, name: m.name,
+        price: m.price * (1 + Math.sin((tick + m.symbol.length) * 1.3) * 0.001),
+        change: m.change, changePct: m.changePct,
+        high: m.price * 1.012, low: m.price * 0.988,
+      }));
+
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-10" id="dashboard">
         <SectionTitle eyebrow="Live Dashboard" title={<>The Market at a <span className="gradient-text">Glance</span></>}
-          subtitle="Real-time snapshots of global indices, commodities, and FX. Data refreshes automatically." />
+          subtitle="Real-time snapshots of global indices, commodities, and FX. Data refreshes every 60 seconds." />
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--gain)] animate-pulse-glow" /> Auto-refresh • Sample data
+          <span className={`h-1.5 w-1.5 rounded-full animate-pulse-glow ${isLive ? "bg-[color:var(--gain)]" : "bg-yellow-400"}`} />
+          {isLive ? `Live • Updated ${lastUpdate}` : "Simulated • Markets may be closed"}
         </div>
       </div>
-
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {MARKET_INDICES.map((m) => {
-          const jitter = Math.sin((tick + m.symbol.length) * 1.3) * 0.15;
-          const px = m.price * (1 + jitter * 0.001);
+        {displayData.map((m) => {
           const up = m.change >= 0;
+          const isINR = ["^NSEI","^BSESN","^NSEBANK","^CNXIT"].includes(m.symbol);
+          const currency = isINR ? "₹" : m.symbol === "USDINR=X" ? "₹" : "";
           return (
             <div key={m.symbol} className="group glass rounded-2xl p-4 hover-lift">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{m.symbol}</div>
-                  <div className="text-sm font-semibold">{m.name}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{m.symbol.replace(/[\^=]/g,"").replace("F","")}</div>
+                  <div className="text-sm font-semibold leading-tight">{m.name}</div>
                 </div>
                 <div className={`h-7 w-7 rounded-lg grid place-items-center ${up ? "bg-[color:var(--gain)]/10 text-[color:var(--gain)]" : "bg-[color:var(--loss)]/10 text-[color:var(--loss)]"}`}>
                   {up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
                 </div>
               </div>
-              <div className="font-mono text-lg font-bold">{fmt(px)}</div>
+              <div className="font-mono text-lg font-bold">{currency}{fmt(m.price)}</div>
               <div className={`text-xs font-medium mt-0.5 ${up ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
                 {up ? "+" : ""}{fmt(m.change)} ({up ? "+" : ""}{fmt(m.changePct)}%)
               </div>
-              <div className="mt-2"><Sparkline data={m.spark} up={up} width={160} height={36} /></div>
+              <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-muted-foreground">
+                <span>H: {fmt(m.high)}</span><span>L: {fmt(m.low)}</span>
+              </div>
             </div>
           );
         })}
@@ -621,7 +461,7 @@ function LiveDashboard() {
   );
 }
 
-/* ---------- Trending Stocks ---------- */
+/* ---------- Trending ---------- */
 function Trending() {
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
@@ -638,8 +478,7 @@ function Trending() {
 function StockCard({ c }: { c: (typeof COMPANIES)[number] }) {
   const up = c.change >= 0;
   const recColor = c.recommendation === "Buy" ? "text-[color:var(--gain)] bg-[color:var(--gain)]/10" :
-    c.recommendation === "Sell" ? "text-[color:var(--loss)] bg-[color:var(--loss)]/10" :
-    "text-[color:var(--lavender)] bg-white/5";
+    c.recommendation === "Sell" ? "text-[color:var(--loss)] bg-[color:var(--loss)]/10" : "text-[color:var(--lavender)] bg-white/5";
   return (
     <div className="glass rounded-2xl p-5 hover-lift">
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -686,8 +525,6 @@ type Exchange = "ALL" | "NSE" | "BSE";
 function CompanyProfile() {
   const [q, setQ] = useState("");
   const [exchange, setExchange] = useState<Exchange>("ALL");
-  // NSE and BSE each show a different subset (BOTH-listed appear on both);
-  // ALL includes globals.
   const filtered = COMPANIES.filter((c) => {
     const matches = c.name.toLowerCase().includes(q.toLowerCase()) || c.ticker.toLowerCase().includes(q.toLowerCase());
     if (!matches) return false;
@@ -696,59 +533,41 @@ function CompanyProfile() {
     return true;
   });
   const [active, setActive] = useState(COMPANIES[0]);
-  // Keep active in current filter
   useEffect(() => {
     if (!filtered.find((c) => c.ticker === active.ticker) && filtered[0]) setActive(filtered[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exchange]);
-
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Company Intelligence"
-        title={<>Deep-Dive <span className="gradient-text">Profiles</span></>}
+      <SectionTitle eyebrow="Company Intelligence" title={<>Deep-Dive <span className="gradient-text">Profiles</span></>}
         subtitle="Switch between NSE, BSE and global listings, then explore leadership, financials, shareholding and business context." />
       <div className="grid lg:grid-cols-[320px_1fr] gap-6">
         <div className="glass-strong rounded-2xl p-4">
           <div className="grid grid-cols-3 gap-1 glass rounded-xl p-1 mb-3">
             {(["ALL", "NSE", "BSE"] as Exchange[]).map((ex) => (
               <button key={ex} onClick={() => setExchange(ex)}
-                className={`h-8 rounded-lg text-xs font-semibold transition ${exchange === ex ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>
-                {ex}
-              </button>
+                className={`h-8 rounded-lg text-xs font-semibold transition ${exchange === ex ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>{ex}</button>
             ))}
           </div>
           <div className="glass rounded-xl px-3 py-2 flex items-center gap-2 mb-3">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <input placeholder={`Search ${exchange === "ALL" ? "all" : exchange} companies…`} value={q} onChange={(e) => setQ(e.target.value)}
-              className="bg-transparent outline-none text-sm flex-1 min-w-0" />
+            <input placeholder={`Search ${exchange === "ALL" ? "all" : exchange} companies…`} value={q} onChange={(e) => setQ(e.target.value)} className="bg-transparent outline-none text-sm flex-1 min-w-0" />
           </div>
-          <div className="text-[10px] uppercase tracking-widest text-muted-foreground px-1 pb-1">
-            {filtered.length} {exchange === "ALL" ? "listings" : `${exchange} listings`}
-          </div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground px-1 pb-1">{filtered.length} listings</div>
           <div className="max-h-[520px] overflow-y-auto space-y-1 pr-1">
-            {filtered.length === 0 && (
-              <div className="p-4 text-xs text-muted-foreground text-center">No listed companies match this filter.</div>
-            )}
+            {filtered.length === 0 && <div className="p-4 text-xs text-muted-foreground text-center">No listed companies match this filter.</div>}
             {filtered.map((c) => (
               <button key={c.ticker} onClick={() => setActive(c)}
                 className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition ${active.ticker === c.ticker ? "bg-[color:var(--cyan)]/15 border border-[color:var(--cyan)]/30" : "hover:bg-white/5 border border-transparent"}`}>
                 <div className="h-9 w-9 rounded-lg grid place-items-center text-xs font-bold text-white shrink-0" style={{ background: c.color }}>{c.logo}</div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{c.name}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {c.ticker} • {c.exchange === "BOTH" ? "NSE / BSE" : c.exchange}
-                  </div>
+                  <div className="text-[11px] text-muted-foreground">{c.ticker} • {c.exchange === "BOTH" ? "NSE / BSE" : c.exchange}</div>
                 </div>
-                <div className={`text-xs font-mono ${c.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
-                  {c.change >= 0 ? "+" : ""}{fmt(c.changePct)}%
-                </div>
+                <div className={`text-xs font-mono ${c.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>{c.change >= 0 ? "+" : ""}{fmt(c.changePct)}%</div>
               </button>
             ))}
           </div>
         </div>
-
-
-
         <div className="glass-strong rounded-2xl p-6 lg:p-8">
           <div className="flex flex-wrap items-start gap-4 justify-between mb-6">
             <div className="flex items-center gap-4 min-w-0">
@@ -766,28 +585,18 @@ function CompanyProfile() {
               </div>
             </div>
           </div>
-
           <div className="grid sm:grid-cols-3 gap-3 mb-6">
-            {[
-              { k: "CEO", v: active.ceo },
-              { k: "Headquarters", v: active.hq },
-              { k: "Founded", v: String(active.founded) },
-              { k: "Revenue", v: active.revenue },
-              { k: "Net Profit", v: active.netProfit },
-              { k: "Employees", v: active.employees },
-            ].map((x) => (
+            {[{ k: "CEO", v: active.ceo }, { k: "Headquarters", v: active.hq }, { k: "Founded", v: String(active.founded) }, { k: "Revenue", v: active.revenue }, { k: "Net Profit", v: active.netProfit }, { k: "Employees", v: active.employees }].map((x) => (
               <div key={x.k} className="glass rounded-xl p-3">
                 <div className="text-[10px] uppercase text-muted-foreground tracking-wider">{x.k}</div>
                 <div className="text-sm font-medium mt-0.5">{x.v}</div>
               </div>
             ))}
           </div>
-
           <div className="glass rounded-xl p-4 mb-6">
             <div className="text-xs uppercase tracking-widest text-[color:var(--cyan)] font-semibold mb-2">About the business</div>
             <p className="text-sm text-muted-foreground leading-relaxed">{active.description}</p>
           </div>
-
           <div className="grid sm:grid-cols-2 gap-4 mb-6">
             <div className="glass rounded-xl p-4">
               <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Shareholding pattern</div>
@@ -796,15 +605,12 @@ function CompanyProfile() {
             <div className="glass rounded-xl p-4">
               <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Major competitors</div>
               <div className="flex flex-wrap gap-2">
-                {active.competitors.map((c) => (
-                  <span key={c} className="text-xs px-2.5 py-1 rounded-md glass border border-white/10">{c}</span>
-                ))}
+                {active.competitors.map((c) => <span key={c} className="text-xs px-2.5 py-1 rounded-md glass border border-white/10">{c}</span>)}
               </div>
             </div>
           </div>
-
           <a href={yahooQuote(active.ticker)} target="_blank" rel="noreferrer noopener"
-             className="inline-flex items-center gap-2 h-11 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
+            className="inline-flex items-center gap-2 h-11 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
             View Complete Analysis <ChevronRight className="h-4 w-4" />
           </a>
         </div>
@@ -818,9 +624,7 @@ function ShareholdingBar({ parts }: { parts: Shareholder[] }) {
   return (
     <div>
       <div className="flex h-3 rounded-full overflow-hidden mb-3">
-        {parts.map((p) => (
-          <div key={p.k} style={{ width: `${(p.v / total) * 100}%`, background: p.c }} />
-        ))}
+        {parts.map((p) => <div key={p.k} style={{ width: `${(p.v / total) * 100}%`, background: p.c }} />)}
       </div>
       <div className="grid grid-cols-2 gap-y-1.5 text-xs">
         {parts.map((p) => (
@@ -835,29 +639,120 @@ function ShareholdingBar({ parts }: { parts: Shareholder[] }) {
   );
 }
 
+/* ---------- Indicator calculations ---------- */
+function calcMA(data: number[], period: number): (number | null)[] {
+  return data.map((_, i) => {
+    if (i < period - 1) return null;
+    return data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
+  });
+}
+
+function calcRSI(closes: number[], period = 14): (number | null)[] {
+  const result: (number | null)[] = Array(closes.length).fill(null);
+  if (closes.length < period + 1) return result;
+  for (let i = period; i < closes.length; i++) {
+    let gains = 0, losses = 0;
+    for (let j = i - period + 1; j <= i; j++) {
+      const diff = closes[j] - closes[j - 1];
+      if (diff > 0) gains += diff; else losses += Math.abs(diff);
+    }
+    const avgGain = gains / period, avgLoss = losses / period;
+    result[i] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+  }
+  return result;
+}
+
+function calcEMA(data: number[], period: number): number[] {
+  const k = 2 / (period + 1);
+  const result: number[] = [];
+  let ema = data[0];
+  for (let i = 0; i < data.length; i++) {
+    ema = i === 0 ? data[0] : data[i] * k + ema * (1 - k);
+    result.push(ema);
+  }
+  return result;
+}
+
+function calcMACD(closes: number[]): { macd: number[]; signal: number[]; hist: number[] } {
+  const ema12 = calcEMA(closes, 12);
+  const ema26 = calcEMA(closes, 26);
+  const macd = ema12.map((v, i) => v - ema26[i]);
+  const signal = calcEMA(macd, 9);
+  const hist = macd.map((v, i) => v - signal[i]);
+  return { macd, signal, hist };
+}
+
+function calcHeikinAshi(data: { o: number; c: number; h: number; l: number }[]) {
+  const ha: { o: number; c: number; h: number; l: number }[] = [];
+  for (let i = 0; i < data.length; i++) {
+    const d = data[i];
+    const haC = (d.o + d.h + d.l + d.c) / 4;
+    const haO = i === 0 ? (d.o + d.c) / 2 : (ha[i - 1].o + ha[i - 1].c) / 2;
+    const haH = Math.max(d.h, haO, haC);
+    const haL = Math.min(d.l, haO, haC);
+    ha.push({ o: haO, c: haC, h: haH, l: haL });
+  }
+  return ha;
+}
+
 /* ---------- Interactive Chart ---------- */
+type ChartType = "candle" | "line" | "area" | "bar" | "heikin";
+
 function InteractiveChart() {
   const ranges = ["1D", "1W", "1M", "6M", "1Y", "5Y"];
   const [range, setRange] = useState("1M");
-  const [type, setType] = useState<"candle" | "line" | "area">("candle");
+  const [type, setType] = useState<ChartType>("candle");
+  const [showRSI, setShowRSI] = useState(false);
+  const [showMACD, setShowMACD] = useState(false);
+  const [showMA20, setShowMA20] = useState(false);
+  const [showMA50, setShowMA50] = useState(false);
+  const [showVol, setShowVol] = useState(false);
+
   const data = useMemo(() => {
     const n = { "1D": 40, "1W": 60, "1M": 90, "6M": 120, "1Y": 160, "5Y": 200 }[range]!;
-    const arr: { o: number; c: number; h: number; l: number }[] = [];
+    const arr: { o: number; c: number; h: number; l: number; v: number }[] = [];
     let v = 100;
     for (let i = 0; i < n; i++) {
       const o = v; const c = v * (1 + (Math.random() - 0.48) * 0.025);
       const h = Math.max(o, c) * (1 + Math.random() * 0.008);
       const l = Math.min(o, c) * (1 - Math.random() * 0.008);
-      arr.push({ o, c, h, l }); v = c;
+      const vol = Math.floor(Math.random() * 1000000 + 500000);
+      arr.push({ o, c, h, l, v: vol }); v = c;
     }
     return arr;
   }, [range]);
+
+  const closes = data.map((d) => d.c);
+  const ma20 = calcMA(closes, 20);
+  const ma50 = calcMA(closes, 50);
+  const rsi = calcRSI(closes);
+  const macdData = calcMACD(closes);
+  const haData = calcHeikinAshi(data);
+  const displayData = type === "heikin" ? haData.map((d, i) => ({ ...d, v: data[i].v })) : data;
+
+  const indicators = [
+    { key: "RSI", active: showRSI, toggle: () => setShowRSI(x => !x) },
+    { key: "MACD", active: showMACD, toggle: () => setShowMACD(x => !x) },
+    { key: "MA(20)", active: showMA20, toggle: () => setShowMA20(x => !x) },
+    { key: "MA(50)", active: showMA50, toggle: () => setShowMA50(x => !x) },
+    { key: "Volume", active: showVol, toggle: () => setShowVol(x => !x) },
+  ];
+
+  const chartTypes: { key: ChartType; label: string }[] = [
+    { key: "candle", label: "Candles" },
+    { key: "heikin", label: "Heikin-Ashi" },
+    { key: "bar", label: "Bar" },
+    { key: "line", label: "Line" },
+    { key: "area", label: "Area" },
+  ];
+
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
       <SectionTitle eyebrow="Interactive Charts"
         title={<>Analyze <span className="gradient-text">Any Timeframe</span></>}
-        subtitle="Switch between candlestick and line, adjust the timeframe, and layer volume alongside the price action." />
+        subtitle="Switch chart types, adjust timeframes, and layer RSI, MACD, Moving Averages and Volume." />
       <div className="glass-strong rounded-3xl p-5 sm:p-6">
+        {/* Controls */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <div className="flex gap-1 glass rounded-xl p-1">
             {ranges.map((r) => (
@@ -865,57 +760,76 @@ function InteractiveChart() {
                 className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${range === r ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>{r}</button>
             ))}
           </div>
-          <div className="flex gap-1 glass rounded-xl p-1">
-            <button onClick={() => setType("candle")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${type === "candle" ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground"}`}>
-              <CandlestickChart className="h-3.5 w-3.5" /> Candles
-            </button>
-            <button onClick={() => setType("line")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${type === "line" ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground"}`}>
-              <LineChart className="h-3.5 w-3.5" /> Line
-            </button>
-            <button onClick={() => setType("area")} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${type === "area" ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground"}`}>
-              <AreaChart className="h-3.5 w-3.5" /> Area
-            </button>
+          <div className="flex gap-1 glass rounded-xl p-1 flex-wrap">
+            {chartTypes.map(({ key, label }) => (
+              <button key={key} onClick={() => setType(key)}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${type === key ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+            ))}
           </div>
-          <div className="ml-auto flex flex-wrap gap-2 text-xs text-muted-foreground">
-            {["RSI", "MACD", "MA(20)", "MA(50)", "Volume"].map((i) => (
-              <span key={i} className="glass px-2.5 py-1 rounded-md border border-white/10">{i}</span>
+          <div className="ml-auto flex flex-wrap gap-2">
+            {indicators.map(({ key, active, toggle }) => (
+              <button key={key} onClick={toggle}
+                className={`px-2.5 py-1 text-xs rounded-md border font-semibold transition ${active ? "bg-[color:var(--cyan)]/20 border-[color:var(--cyan)]/50 text-[color:var(--cyan)]" : "glass border-white/10 text-muted-foreground hover:text-foreground"}`}>
+                {key}
+              </button>
             ))}
           </div>
         </div>
-        <BigChart data={data} type={type} />
+
+        {/* Main chart */}
+        <BigChart data={displayData} type={type === "heikin" ? "candle" : type} ma20={showMA20 ? ma20 : []} ma50={showMA50 ? ma50 : []} />
+
+        {/* Volume panel */}
+        {showVol && <VolumeChart data={displayData} />}
+
+        {/* RSI panel */}
+        {showRSI && <RSIChart rsi={rsi} />}
+
+        {/* MACD panel */}
+        {showMACD && <MACDChart macd={macdData} />}
       </div>
     </section>
   );
 }
 
-function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: number }[]; type: "candle" | "line" | "area" }) {
-  const w = 1100, h = 360, pad = 20;
+function BigChart({ data, type, ma20, ma50 }: {
+  data: { o: number; c: number; h: number; l: number }[];
+  type: "candle" | "line" | "area" | "bar";
+  ma20: (number | null)[];
+  ma50: (number | null)[];
+}) {
+  const w = 1100, h = 320, pad = 20;
   const all = data.flatMap((d) => [d.h, d.l]);
   const min = Math.min(...all), max = Math.max(...all);
   const y = (v: number) => pad + (h - pad * 2) * (1 - (v - min) / (max - min));
   const step = (w - pad * 2) / data.length;
   const line = data.map((d, i) => `${pad + i * step},${y(d.c)}`).join(" ");
+
+  const maLine = (arr: (number | null)[]) => {
+    const pts: string[] = [];
+    arr.forEach((v, i) => { if (v !== null) pts.push(`${pad + i * step},${y(v)}`); });
+    return pts.join(" ");
+  };
+
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[300px] sm:h-[380px]">
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[260px] sm:h-[320px]">
       <defs>
         <linearGradient id="chartArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.5" />
+          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.4" />
           <stop offset="100%" stopColor="var(--cyan)" stopOpacity="0" />
         </linearGradient>
       </defs>
       {[0.2, 0.4, 0.6, 0.8].map((p) => (
         <line key={p} x1="0" y1={h * p} x2={w} y2={h * p} stroke="currentColor" strokeOpacity="0.06" strokeDasharray="3 5" />
       ))}
-      {type === "line" && (
-        <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
-      )}
+      {type === "line" && <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />}
       {type === "area" && (
         <>
           <path d={`M ${pad},${h - pad} L ${line} L ${w - pad},${h - pad} Z`} fill="url(#chartArea)" />
           <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
         </>
       )}
-      {type === "candle" && data.map((d, i) => {
+      {(type === "candle") && data.map((d, i) => {
         const x = pad + i * step; const up = d.c >= d.o;
         const color = up ? "var(--gain)" : "var(--loss)";
         return (
@@ -925,7 +839,87 @@ function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: 
           </g>
         );
       })}
+      {type === "bar" && data.map((d, i) => {
+        const x = pad + i * step; const up = d.c >= d.o;
+        const color = up ? "var(--gain)" : "var(--loss)";
+        const cx = x + step / 2;
+        return (
+          <g key={i}>
+            <line x1={cx} x2={cx} y1={y(d.h)} y2={y(d.l)} stroke={color} strokeWidth="1.5" />
+            <line x1={cx - step * 0.3} x2={cx} y1={y(d.o)} y2={y(d.o)} stroke={color} strokeWidth="1.5" />
+            <line x1={cx} x2={cx + step * 0.3} y1={y(d.c)} y2={y(d.c)} stroke={color} strokeWidth="1.5" />
+          </g>
+        );
+      })}
+      {/* MA20 overlay */}
+      {ma20.length > 0 && <polyline points={maLine(ma20)} fill="none" stroke="#f59e0b" strokeWidth="1.5" opacity="0.8" />}
+      {/* MA50 overlay */}
+      {ma50.length > 0 && <polyline points={maLine(ma50)} fill="none" stroke="#a855f7" strokeWidth="1.5" opacity="0.8" />}
+      {/* Legend */}
+      {ma20.length > 0 && <><rect x={w - 120} y={8} width={10} height={3} fill="#f59e0b" rx="1" /><text x={w - 106} y={13} fill="#f59e0b" fontSize="9">MA(20)</text></>}
+      {ma50.length > 0 && <><rect x={w - 60} y={8} width={10} height={3} fill="#a855f7" rx="1" /><text x={w - 46} y={13} fill="#a855f7" fontSize="9">MA(50)</text></>}
     </svg>
+  );
+}
+
+function VolumeChart({ data }: { data: { c: number; o: number; v: number }[] }) {
+  const w = 1100, h = 80, pad = 20;
+  const maxV = Math.max(...data.map((d) => d.v));
+  const step = (w - pad * 2) / data.length;
+  return (
+    <div className="mt-2 border-t border-white/10 pt-2">
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Volume</div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16">
+        {data.map((d, i) => {
+          const up = d.c >= d.o;
+          const barH = (d.v / maxV) * (h - 10);
+          return <rect key={i} x={pad + i * step + 1} y={h - barH} width={Math.max(1, step - 2)} height={barH} fill={up ? "var(--gain)" : "var(--loss)"} opacity="0.5" rx="0.5" />;
+        })}
+      </svg>
+    </div>
+  );
+}
+
+function RSIChart({ rsi }: { rsi: (number | null)[] }) {
+  const w = 1100, h = 80, pad = 20;
+  const step = (w - pad * 2) / rsi.length;
+  const pts = rsi.map((v, i) => v !== null ? `${pad + i * step},${pad + (h - pad * 2) * (1 - v / 100)}` : null).filter(Boolean).join(" ");
+  return (
+    <div className="mt-2 border-t border-white/10 pt-2">
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">RSI (14)</div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16">
+        <line x1={0} x2={w} y1={pad + (h - pad * 2) * 0.3} y2={pad + (h - pad * 2) * 0.3} stroke="var(--loss)" strokeOpacity="0.4" strokeDasharray="3 4" />
+        <line x1={0} x2={w} y1={pad + (h - pad * 2) * 0.7} y2={pad + (h - pad * 2) * 0.7} stroke="var(--gain)" strokeOpacity="0.4" strokeDasharray="3 4" />
+        <text x={4} y={pad + (h - pad * 2) * 0.3 + 4} fill="var(--loss)" fontSize="8" opacity="0.7">70</text>
+        <text x={4} y={pad + (h - pad * 2) * 0.7 + 4} fill="var(--gain)" fontSize="8" opacity="0.7">30</text>
+        <polyline points={pts} fill="none" stroke="var(--aqua)" strokeWidth="1.5" />
+      </svg>
+    </div>
+  );
+}
+
+function MACDChart({ macd }: { macd: { macd: number[]; signal: number[]; hist: number[] } }) {
+  const w = 1100, h = 80, pad = 20;
+  const step = (w - pad * 2) / macd.macd.length;
+  const allVals = [...macd.macd, ...macd.signal, ...macd.hist];
+  const min = Math.min(...allVals), max = Math.max(...allVals);
+  const yv = (v: number) => pad + (h - pad * 2) * (1 - (v - min) / (max - min));
+  const zero = yv(0);
+  const macdLine = macd.macd.map((v, i) => `${pad + i * step},${yv(v)}`).join(" ");
+  const sigLine = macd.signal.map((v, i) => `${pad + i * step},${yv(v)}`).join(" ");
+  return (
+    <div className="mt-2 border-t border-white/10 pt-2">
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">MACD (12,26,9)</div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16">
+        <line x1={0} x2={w} y1={zero} y2={zero} stroke="currentColor" strokeOpacity="0.15" />
+        {macd.hist.map((v, i) => {
+          const barH = Math.abs(yv(v) - zero);
+          return <rect key={i} x={pad + i * step + 1} y={v >= 0 ? zero - barH : zero} width={Math.max(1, step - 2)} height={barH} fill={v >= 0 ? "var(--gain)" : "var(--loss)"} opacity="0.5" />;
+        })}
+        <polyline points={macdLine} fill="none" stroke="var(--cyan)" strokeWidth="1.5" />
+        <polyline points={sigLine} fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+      </svg>
+    </div>
   );
 }
 
@@ -933,8 +927,7 @@ function BigChart({ data, type }: { data: { o: number; c: number; h: number; l: 
 function Ratios() {
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Financial Ratios"
-        title={<>The <span className="gradient-text">Numbers That Matter</span></>}
+      <SectionTitle eyebrow="Financial Ratios" title={<>The <span className="gradient-text">Numbers That Matter</span></>}
         subtitle="Every ratio comes with a beginner-friendly explanation." />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {RATIOS.map((r) => (
@@ -956,8 +949,7 @@ function GainersLosers() {
   const losers = sorted.filter((c) => c.change < 0).reverse().slice(0, 5);
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Movers"
-        title={<>Today's <span className="gradient-text">Top Gainers & Losers</span></>}
+      <SectionTitle eyebrow="Movers" title={<>Today's <span className="gradient-text">Top Gainers & Losers</span></>}
         subtitle="Auto-updated market movers across our tracked universe." />
       <div className="grid md:grid-cols-2 gap-6">
         <MoversTable title="Top Gainers" rows={gainers} up />
@@ -1022,21 +1014,19 @@ function NewsGrid() {
         {NEWS.map((n, i) => (
           <article key={i} className="glass rounded-2xl overflow-hidden hover-lift group">
             <div className="relative h-40 overflow-hidden bg-white/5">
-              <img src={n.image} alt={n.title} loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <img src={n.image} alt={n.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--midnight)]/85 via-[color:var(--midnight)]/20 to-transparent" />
               <div className="absolute top-3 left-3 text-[10px] uppercase tracking-widest bg-white/15 backdrop-blur px-2 py-1 rounded-md font-semibold">{n.category}</div>
               <Newspaper className="absolute bottom-3 right-3 h-8 w-8 text-white/70" />
             </div>
             <div className="p-5">
               <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-2">
-                <span className="font-medium text-foreground/80">{n.source}</span>
-                <span>•</span><span>{n.time}</span>
+                <span className="font-medium text-foreground/80">{n.source}</span><span>•</span><span>{n.time}</span>
               </div>
               <h3 className="font-semibold leading-snug mb-2 group-hover:text-[color:var(--cyan)] transition">{n.title}</h3>
               <p className="text-sm text-muted-foreground line-clamp-2">{n.summary}</p>
               <a href={googleNews(n.title)} target="_blank" rel="noreferrer noopener"
-                 className="mt-4 text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 hover:gap-2 transition-all">
+                className="mt-4 text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 hover:gap-2 transition-all">
                 Read more <ArrowUpRight className="h-3.5 w-3.5" />
               </a>
             </div>
@@ -1051,8 +1041,7 @@ function NewsGrid() {
 function EconCalendar() {
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Economic Calendar"
-        title={<>Upcoming <span className="gradient-text">Market-Moving Events</span></>}
+      <SectionTitle eyebrow="Economic Calendar" title={<>Upcoming <span className="gradient-text">Market-Moving Events</span></>}
         subtitle="Central-bank decisions, macro releases, earnings, and IPO dates." />
       <div className="glass-strong rounded-2xl overflow-hidden">
         <div className="hidden sm:grid grid-cols-[100px_100px_80px_1fr_100px] px-5 py-3 text-[11px] uppercase tracking-widest text-muted-foreground border-b border-white/10">
@@ -1065,11 +1054,7 @@ function EconCalendar() {
             <div className="text-xs"><span className="glass px-2 py-0.5 rounded-md">{e.region}</span></div>
             <div className="col-span-2 sm:col-span-1 text-sm font-medium">{e.event}</div>
             <div className="text-right">
-              <span className={`text-[10px] font-semibold px-2 py-1 rounded-md ${
-                e.impact === "High" ? "bg-[color:var(--loss)]/15 text-[color:var(--loss)]" :
-                e.impact === "Medium" ? "bg-[color:var(--aqua)]/15 text-[color:var(--aqua)]" :
-                "bg-white/5 text-muted-foreground"
-              }`}>{e.impact}</span>
+              <span className={`text-[10px] font-semibold px-2 py-1 rounded-md ${e.impact === "High" ? "bg-[color:var(--loss)]/15 text-[color:var(--loss)]" : e.impact === "Medium" ? "bg-[color:var(--aqua)]/15 text-[color:var(--aqua)]" : "bg-white/5 text-muted-foreground"}`}>{e.impact}</span>
             </div>
           </div>
         ))}
@@ -1078,44 +1063,49 @@ function EconCalendar() {
   );
 }
 
-/* ---------- IPO ---------- */
+/* ---------- IPO (6/6/6) ---------- */
 function IPOSection() {
   const [tab, setTab] = useState<"Upcoming" | "Open" | "Closed">("Open");
+  const filtered = ALL_IPOS.filter((i) => i.status === tab);
   return (
     <section id="ipos" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="IPO Center"
-        title={<>Track <span className="gradient-text">Every New Listing</span></>}
+      <SectionTitle eyebrow="IPO Center" title={<>Track <span className="gradient-text">Every New Listing</span></>}
         subtitle="Upcoming, open, and recently listed IPOs with price band, GMP, and subscription snapshot." />
       <div className="flex gap-1 glass rounded-xl p-1 w-fit mb-6">
         {(["Upcoming", "Open", "Closed"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition ${tab === t ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>{t}</button>
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition ${tab === t ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>
+            {t} <span className="ml-1 opacity-60">({ALL_IPOS.filter(i => i.status === t).length})</span>
+          </button>
         ))}
       </div>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {IPOS.filter((i) => i.status === tab).map((i) => (
-          <div key={i.name} className="glass rounded-2xl p-5 hover-lift">
+        {filtered.map((ipo) => (
+          <div key={ipo.name} className="glass rounded-2xl p-5 hover-lift">
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-11 w-11 rounded-xl grid place-items-center font-bold text-white shrink-0" style={{ background: i.color }}>
+              <div className="h-11 w-11 rounded-xl grid place-items-center font-bold text-white shrink-0" style={{ background: ipo.color }}>
                 <Rocket className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <div className="font-semibold truncate">{i.name}</div>
-                <div className="text-[11px] text-muted-foreground">{i.date}</div>
+                <div className="font-semibold truncate">{ipo.name}</div>
+                <div className="text-[11px] text-muted-foreground">{ipo.date}</div>
               </div>
+              <span className={`ml-auto text-[10px] font-semibold px-2 py-1 rounded-md shrink-0 ${ipo.status === "Open" ? "bg-[color:var(--gain)]/15 text-[color:var(--gain)]" : ipo.status === "Upcoming" ? "bg-[color:var(--aqua)]/15 text-[color:var(--aqua)]" : "bg-white/10 text-muted-foreground"}`}>
+                {ipo.status}
+              </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="glass rounded-lg py-2">
                 <div className="text-[10px] uppercase text-muted-foreground">Band</div>
-                <div className="text-xs font-mono font-semibold">{i.band}</div>
+                <div className="text-xs font-mono font-semibold">{ipo.band}</div>
               </div>
               <div className="glass rounded-lg py-2">
                 <div className="text-[10px] uppercase text-muted-foreground">GMP</div>
-                <div className="text-xs font-mono font-semibold text-[color:var(--gain)]">{i.gmp}</div>
+                <div className="text-xs font-mono font-semibold text-[color:var(--gain)]">{ipo.gmp}</div>
               </div>
               <div className="glass rounded-lg py-2">
                 <div className="text-[10px] uppercase text-muted-foreground">Sub.</div>
-                <div className="text-xs font-mono font-semibold">{i.sub}</div>
+                <div className="text-xs font-mono font-semibold">{ipo.sub}</div>
               </div>
             </div>
           </div>
@@ -1129,8 +1119,7 @@ function IPOSection() {
 function FundsSection() {
   return (
     <section id="funds" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Mutual Funds & ETFs"
-        title={<>Popular <span className="gradient-text">Funds Snapshot</span></>}
+      <SectionTitle eyebrow="Mutual Funds & ETFs" title={<>Popular <span className="gradient-text">Funds Snapshot</span></>}
         subtitle="Trailing returns, risk rating, expense ratio, and AUM at a glance." />
       <div className="glass-strong rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
@@ -1180,8 +1169,7 @@ function Education() {
   ];
   return (
     <section id="learn" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Learn"
-        title={<>Investor <span className="gradient-text">Education Hub</span></>}
+      <SectionTitle eyebrow="Learn" title={<>Investor <span className="gradient-text">Education Hub</span></>}
         subtitle="Zero to informed — concise, jargon-free lessons for every experience level." />
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {items.map((i) => (
@@ -1192,7 +1180,7 @@ function Education() {
             <h3 className="font-semibold mb-1.5">{i.title}</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-4">{i.desc}</p>
             <a href={investopedia(i.title)} target="_blank" rel="noreferrer noopener"
-               className="text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+              className="text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 group-hover:gap-2 transition-all">
               Learn more <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
           </div>
@@ -1206,19 +1194,15 @@ function Education() {
 function Heatmap() {
   const shade = (v: number) => {
     const abs = Math.min(1, Math.abs(v) / 3);
-    return v >= 0
-      ? `color-mix(in oklab, var(--gain) ${20 + abs * 55}%, transparent)`
-      : `color-mix(in oklab, var(--loss) ${20 + abs * 55}%, transparent)`;
+    return v >= 0 ? `color-mix(in oklab, var(--gain) ${20 + abs * 55}%, transparent)` : `color-mix(in oklab, var(--loss) ${20 + abs * 55}%, transparent)`;
   };
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6" id="markets">
-      <SectionTitle eyebrow="Sector Heatmap"
-        title={<>Market Pulse by <span className="gradient-text">Sector</span></>}
+      <SectionTitle eyebrow="Sector Heatmap" title={<>Market Pulse by <span className="gradient-text">Sector</span></>}
         subtitle="One glance shows where capital is rotating today." />
       <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
         {SECTORS.map((s) => (
-          <div key={s.name} className="rounded-xl p-4 border border-white/10 hover-lift transition"
-               style={{ background: shade(s.change) }}>
+          <div key={s.name} className="rounded-xl p-4 border border-white/10 hover-lift transition" style={{ background: shade(s.change) }}>
             <div className="text-xs font-semibold">{s.name}</div>
             <div className={`font-mono text-lg font-bold mt-1 ${s.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
               {s.change >= 0 ? "+" : ""}{fmt(s.change)}%
@@ -1236,8 +1220,7 @@ function GlobalMarkets() {
   const labels: Record<(typeof groups)[number], string> = { US: "US Markets", IN: "Indian Markets", EU: "European Markets", ASIA: "Asian Markets", CRYPTO: "Crypto", FX: "Forex", COMM: "Commodities" };
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Global Markets"
-        title={<>The <span className="gradient-text">World Board</span></>}
+      <SectionTitle eyebrow="Global Markets" title={<>The <span className="gradient-text">World Board</span></>}
         subtitle="Regional indices, crypto, FX, and commodities in one view." />
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {groups.map((g) => {
@@ -1280,15 +1263,10 @@ function AIInsights() {
         <div className="relative grid lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
           <div>
             <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 text-xs font-semibold mb-5">
-              <Sparkles className="h-3.5 w-3.5 text-[color:var(--aqua)]" />
-              AI Market Insights • Informational Only
+              <Sparkles className="h-3.5 w-3.5 text-[color:var(--aqua)]" /> AI Market Insights • Informational Only
             </div>
-            <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
-              Today's <span className="gradient-text">market mood</span>, summarized by AI.
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              An overview of today's session — sector rotation, bullish and bearish undercurrents, notable highlights, and key risks. Generated by AI for context only; not investment advice.
-            </p>
+            <h2 className="text-3xl sm:text-4xl font-bold leading-tight">Today's <span className="gradient-text">market mood</span>, summarized by AI.</h2>
+            <p className="mt-4 text-muted-foreground">An overview of today's session — sector rotation, bullish and bearish undercurrents, notable highlights, and key risks. Generated by AI for context only; not investment advice.</p>
             <div className="mt-6 grid grid-cols-2 gap-3 max-w-md">
               <Mood label="Overall Mood" value="Cautiously Bullish" tone="up" />
               <Mood label="Volatility (VIX)" value="14.2 • Low" tone="n" />
@@ -1370,32 +1348,23 @@ function Newsletter() {
               {status === "sending" ? "Subscribing…" : "Subscribe"}
             </button>
           </form>
-          {status === "ok" && <div className="mt-3 text-sm">{msg}</div>}
+          {status === "ok" && <div className="mt-3 text-sm font-medium">{msg}</div>}
           {status === "err" && <div className="mt-3 text-sm text-[color:var(--midnight)]/90">{msg}</div>}
-          <p className="mt-3 text-[11px] text-[color:var(--midnight)]/70">
-            By subscribing you agree to receive market emails from {OWNER.name}. Unsubscribe anytime.
-          </p>
+          <p className="mt-3 text-[11px] text-[color:var(--midnight)]/70">By subscribing you agree to receive market emails from {OWNER.name}. Unsubscribe anytime.</p>
         </div>
       </div>
     </section>
   );
 }
 
-/* ---------- Floating WhatsApp button ---------- */
+/* ---------- WhatsApp FAB ---------- */
 function WhatsAppFab() {
   return (
-    <a
-      href={OWNER.whatsapp}
-      target="_blank"
-      rel="noreferrer noopener"
-      aria-label="Chat with Stocketize on WhatsApp"
+    <a href={OWNER.whatsapp} target="_blank" rel="noreferrer noopener" aria-label="Chat with Stocketize on WhatsApp"
       className="fixed bottom-6 right-6 z-[90] h-14 w-14 rounded-full grid place-items-center shadow-2xl transition hover:scale-110 group"
-      style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}
-    >
+      style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
       <MessageCircle className="h-6 w-6 text-white" strokeWidth={2.4} />
-      <span className="absolute right-full mr-3 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold bg-[color:var(--midnight)] text-white opacity-0 group-hover:opacity-100 transition pointer-events-none">
-        Chat on WhatsApp
-      </span>
+      <span className="absolute right-full mr-3 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold bg-[color:var(--midnight)] text-white opacity-0 group-hover:opacity-100 transition pointer-events-none">Chat on WhatsApp</span>
       <span className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ background: "#25D366" }} />
     </a>
   );
@@ -1409,47 +1378,28 @@ function Footer() {
         <div className="grid md:grid-cols-4 gap-10">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-9 w-9 rounded-xl gradient-brand grid place-items-center">
-                <Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} />
-              </div>
+              <div className="h-9 w-9 rounded-xl gradient-brand grid place-items-center"><Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} /></div>
               <div className="font-display font-bold">Stocketize<span className="gradient-text"> AI</span></div>
             </div>
             <p className="text-sm text-white/60 leading-relaxed">Real-time market intelligence, company insights, and investor education — in one elegant platform.</p>
           </div>
-          <FooterCol title="Quick Links" items={[
-            { label: "Home", href: "#home" },
-            { label: "Markets", href: "#markets" },
-            { label: "Companies", href: "#companies" },
-            { label: "News", href: "#news" },
-            { label: "About", href: "#about" },
-          ]} />
-          <FooterCol title="Legal" items={[
-            { label: "Privacy Policy", to: "/privacy" },
-            { label: "Terms & Conditions", to: "/terms" },
-            { label: "Disclaimer", to: "/disclaimer" },
-            { label: "Affiliate Disclosure", to: "/affiliate-disclosure" },
-          ]} />
+          <FooterCol title="Quick Links" items={[{ label: "Home", href: "#home" }, { label: "Markets", href: "#markets" }, { label: "Companies", href: "#companies" }, { label: "News", href: "#news" }, { label: "About", href: "#about" }]} />
+          <FooterCol title="Legal" items={[{ label: "Privacy Policy", to: "/privacy" }, { label: "Terms & Conditions", to: "/terms" }, { label: "Disclaimer", to: "/disclaimer" }, { label: "Affiliate Disclosure", to: "/affiliate-disclosure" }]} />
           <div>
             <div className="text-sm font-semibold mb-4">About the Website Owner</div>
             <ul className="text-sm text-white/70 space-y-2">
               <li>Name: <span className="text-white">{OWNER.name}</span></li>
               <li className="flex items-center gap-1.5">
                 <Phone className="h-3.5 w-3.5 shrink-0" />
-                <a href={`tel:${OWNER.phone}`} className="text-white hover:text-[color:var(--cyan)] transition">
-                  Contact No. — {OWNER.phone}
-                </a>
+                <a href={`tel:${OWNER.phone}`} className="text-white hover:text-[color:var(--cyan)] transition">Contact No. — {OWNER.phone}</a>
               </li>
               <li className="flex items-center gap-1.5">
                 <MessageCircle className="h-3.5 w-3.5 shrink-0" style={{ color: "#25D366" }} />
-                <a href={OWNER.whatsapp} target="_blank" rel="noreferrer noopener"
-                  className="text-white hover:text-[color:var(--cyan)] transition">
-                  WhatsApp — {OWNER.whatsappDisplay}
-                </a>
+                <a href={OWNER.whatsapp} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition">WhatsApp — {OWNER.whatsappDisplay}</a>
               </li>
             </ul>
           </div>
         </div>
-
         <div className="mt-12 grid md:grid-cols-2 gap-4 text-xs text-white/60">
           <div className="rounded-xl border border-white/10 p-4 leading-relaxed">
             <div className="font-semibold text-white/90 mb-1">Disclaimer</div>
@@ -1460,8 +1410,6 @@ function Footer() {
             This website earns revenue through <strong>advertisements, affiliate partnerships, sponsored content and referral links</strong>. Commissions may be earned at no extra cost to you. See the full <Link to="/affiliate-disclosure" className="underline hover:text-[color:var(--cyan)]">Affiliate Disclosure</Link>.
           </div>
         </div>
-
-
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-2 text-xs text-white/50">
           <div>© 2026 Stocketize AI. All rights reserved.</div>
           <div>Built for learners, by learners.</div>
@@ -1479,18 +1427,14 @@ function FooterCol({ title, items }: { title: string; items: FooterItem[] }) {
       <ul className="space-y-2 text-sm text-white/70">
         {items.map((i) => (
           <li key={i.label}>
-            {i.to ? (
-              <Link to={i.to} className="hover:text-[color:var(--cyan)] transition">{i.label}</Link>
-            ) : (
-              <a href={i.href} className="hover:text-[color:var(--cyan)] transition">{i.label}</a>
-            )}
+            {i.to ? <Link to={i.to} className="hover:text-[color:var(--cyan)] transition">{i.label}</Link>
+              : <a href={i.href} className="hover:text-[color:var(--cyan)] transition">{i.label}</a>}
           </li>
         ))}
       </ul>
     </div>
   );
 }
-
 
 /* ---------- Testimonials ---------- */
 function Testimonials() {
@@ -1500,12 +1444,11 @@ function Testimonials() {
     { q: "I use the ratios section to teach my finance students. Every metric comes with a plain-English explanation, which is rare on Indian sites.", n: "Prof. Meera Kulkarni", r: "MBA Faculty • Mumbai" },
     { q: "Finally an educational platform that clearly says 'this isn't advice'. That honesty is what made me stick around.", n: "Vikram Shah", r: "Chartered Accountant • Ahmedabad" },
     { q: "The IPO tracker and sector heatmap are super useful for weekend research. Clean UI, no clutter, and works well on my phone.", n: "Sneha Reddy", r: "Long-term Investor • Hyderabad" },
-    { q: "The WhatsApp support is a lovely touch. I had a question about the ratios section and got a clear, honest reply within a day — no salesy pitch, just help.", n: "Karan Bhatia", r: "Aspiring Trader • Jaipur" },
+    { q: "The WhatsApp support is a lovely touch. Got a clear, honest reply within a day — no salesy pitch, just help.", n: "Karan Bhatia", r: "Aspiring Trader • Jaipur" },
   ];
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Community"
-        title={<>What <span className="gradient-text">Investors Say</span></>}
+      <SectionTitle eyebrow="Community" title={<>What <span className="gradient-text">Investors Say</span></>}
         subtitle="Feedback from readers across India who use Stocketize AI to learn and stay informed." />
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {items.map((t) => (
@@ -1532,30 +1475,26 @@ function Testimonials() {
 function FAQ() {
   const items = [
     { q: "Is Stocketize AI giving me financial advice?", a: "No. All content is AI-generated and strictly for education and information only. Nothing on the site is investment, tax or legal advice. Please consult a SEBI-registered advisor before making any investment." },
-    { q: "How current is the market data on Stocketize AI?", a: "The platform currently uses realistic simulated data for demonstration. When connected to a live NSE / BSE feed, indices, prices, gainers/losers, IPO status and news auto-refresh throughout market hours." },
+    { q: "How current is the market data on Stocketize AI?", a: "The platform attempts to fetch live NSE/BSE data. When markets are open, indices, prices and news update every 60 seconds. Outside market hours, realistic simulated data is shown as a fallback." },
     { q: "Do I need to pay to use the website or the newsletter?", a: "No. Reading market data, company profiles, education content, IPOs, mutual funds, ratios and news is completely free. The daily newsletter is also free." },
-    { q: "How often is the newsletter sent and what does it contain?", a: "Subscribers receive a welcome brief immediately, a daily morning market update, and a weekend deep-dive. Content covers NSE/BSE movement, top gainers/losers, IPOs, economic events, and beginner-friendly education." },
+    { q: "How often is the newsletter sent and what does it contain?", a: "Subscribers receive a welcome brief immediately, a daily morning market update, and a weekend deep-dive covering NSE/BSE movement, top gainers/losers, IPOs, economic events, and education." },
     { q: "I'm a complete beginner — where should I start?", a: "Open the Investor Education Hub on the home page and start with 'What is the Stock Market?' followed by 'How to Start Investing'. Every ratio in the Financial Ratios section also has a plain-English explanation." },
   ];
   const [openIdx, setOpenIdx] = useState<number | null>(0);
   return (
     <section className="relative py-20 mx-auto max-w-4xl px-4 sm:px-6" id="faq">
-      <SectionTitle eyebrow="FAQ"
-        title={<>Frequently <span className="gradient-text">Asked Questions</span></>}
-        subtitle="Quick answers about Stocketize AI, data accuracy, newsletters and getting started with Indian stock market investing." />
+      <SectionTitle eyebrow="FAQ" title={<>Frequently <span className="gradient-text">Asked Questions</span></>}
+        subtitle="Quick answers about Stocketize AI, data accuracy, newsletters and getting started." />
       <div className="space-y-3">
         {items.map((it, i) => {
           const open = openIdx === i;
           return (
             <div key={it.q} className="glass rounded-2xl overflow-hidden border border-white/10">
-              <button onClick={() => setOpenIdx(open ? null : i)}
-                className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 hover:bg-white/5 transition">
+              <button onClick={() => setOpenIdx(open ? null : i)} className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 hover:bg-white/5 transition">
                 <span className="text-sm sm:text-base font-semibold">{it.q}</span>
                 <ChevronRight className={`h-4 w-4 shrink-0 text-[color:var(--cyan)] transition-transform ${open ? "rotate-90" : ""}`} />
               </button>
-              {open && (
-                <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">{it.a}</div>
-              )}
+              {open && <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">{it.a}</div>}
             </div>
           );
         })}
@@ -1564,16 +1503,14 @@ function FAQ() {
   );
 }
 
-/* ---------- Page ---------- */
+/* ---------- Home Page ---------- */
 function Home() {
   const { light, toggle } = useTheme();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate({ to: "/auth" });
-    }
+    if (!loading && !user) navigate({ to: "/auth" });
   }, [user, loading, navigate]);
 
   if (loading) {
@@ -1619,4 +1556,11 @@ function Home() {
     </div>
   );
 }
+ENDOFFILE
+echo "Done! $(wc -l < /home/claude/index.tsx) lines written"
+Output
+
+
+
+
 
