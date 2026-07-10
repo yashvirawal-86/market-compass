@@ -1,0 +1,13 @@
+
+async function handleSubscribeClick() {
+  const apiEndpoint = isSubscribed ? "/api/newsletter/unsubscribe" : "/api/newsletter/subscribe";
+  const res = await fetch(apiEndpoint, {
+    method: "POST",
+    body: JSON.stringify({ email: userEmail })
+  });
+  const data = await res.json();
+  
+  // Directly updates button UI text dynamically based on backend server verification response
+  setButtonText(data.actionButtonText); 
+  setIsSubscribed(data.status === "subscribed");
+}
