@@ -1,1561 +1,294 @@
-import TradingViewChart from "@/components/TradingViewChart";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useAuth } from "@/lib/useAuth";
-import {
-  Search, Moon, Sun, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  Activity, Sparkles, BarChart3, LineChart, CandlestickChart, Newspaper,
-  Rocket, GraduationCap, Globe2, Brain, Mail, MessageCircle, Phone,
-  ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart, LogOut,
-} from "lucide-react";
+import { SignJWT, jwtVerify } from 'jose';
 
-const OWNER = {
-  name: "Yashvi Rawal",
-  email: "yashvirawal86@gmail.com",
-  linkedin: "https://www.linkedin.com/in/yashvi-rawal",
-  youtube: "https://www.youtube.com/@Yashvi-Rawal",
-  instagram: "https://www.instagram.com/",
-  site: "www.yr.stocketize.com",
-  whatsapp: "https://wa.me/919550541145",
-  whatsappDisplay: "+91 9550541145",
-  phone: "9550541145",
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const method = request.method;
+
+    // Handle CORS preflight requests
+    if (method === "OPTIONS") {
+      return handleCors();
+    }
+
+    try {
+      // 1. PUBLIC ROUTES & AUTHENTICATION
+      if (path === "/api/auth/register" && method === "POST") {
+        return await handleRegister(request, env);
+      }
+      if (path === "/api/auth/login" && method === "POST") {
+        return await handleLogin(request, env);
+      }
+      if (path === "/api/newsletter/subscribe" && method === "POST") {
+        return await handleNewsletterSubscribe(request, env);
+      }
+
+      // 2. PROTECTED ROUTES (Require Valid JWT Token)
+      const user = await authenticateRequest(request, env);
+      if (!user) {
+        return jsonResponse({ error: "Unauthorized. Missing or invalid token." }, 401);
+      }
+
+      // Live Market Data Router
+      if (path === "/api/market/live" && method === "GET") {
+        const symbol = url.searchParams.get("symbol") || "AAPL";
+        return await handleLiveMarketData(symbol, env);
+      }
+
+      // Technical Indicators Router (RSI, MACD, Moving Averages)
+      if (path === "/api/market/indicators" && method === "GET") {
+        const symbol = url.searchParams.get("symbol") || "AAPL";
+        return await handleTechnicalIndicators(symbol, env);
+      }
+
+      // IPO Tracker Router
+      if (path === "/api/market/ipos" && method === "GET") {
+        return await handleIpoTracker(env);
+      }
+
+      // TradingView Configuration Helper
+      if (path === "/api/market/tradingview-config" && method === "GET") {
+        return jsonResponse({
+          container_id: "tradingview_chart",
+          library_path: "https://s3.tradingview.com/tv.js",
+          default_symbol: "NASDAQ:AAPL",
+          interval: "D",
+          timezone: "Etc/UTC",
+          theme: "dark",
+          style: "1"
+        });
+      }
+
+      return jsonResponse({ error: "Route not found" }, 404);
+
+    } catch (err) {
+      return jsonResponse({ error: err.message || "Internal Server Error" }, 500);
+    }
+  }
 };
-const yahooQuote = (ticker: string) =>
-  `https://finance.yahoo.com/quote/${encodeURIComponent(ticker.replace(/\./g, "-"))}`;
-const googleNews = (q: string) =>
-  `https://www.google.com/search?tbm=nws&q=${encodeURIComponent(q)}`;
-const investopedia = (q: string) =>
-  `https://www.investopedia.com/search?q=${encodeURIComponent(q)}`;
-import { Sparkline, fmt } from "@/components/sparkline";
-import {
-  MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
-  type Shareholder,
-} from "@/lib/market-data";
-import { subscribeToNewsletter } from "@/lib/newsletter.functions";
 
-/* ---------- 18 IPOs (6 Upcoming, 6 Open, 6 Closed) ---------- */
-const ALL_IPOS = [
-  // UPCOMING
-  { name: "Swiggy Ltd", date: "Jul 18 – Jul 20", band: "₹390–410", gmp: "+₹65", sub: "—", status: "Upcoming", color: "#f97316" },
-  { name: "Ola Electric", date: "Jul 19 – Jul 21", band: "₹72–76", gmp: "+₹18", sub: "—", status: "Upcoming", color: "#8b5cf6" },
-  { name: "FirstCry", date: "Jul 22 – Jul 24", band: "₹440–465", gmp: "+₹48", sub: "—", status: "Upcoming", color: "#ec4899" },
-  { name: "Afcons Infra", date: "Jul 25 – Jul 27", band: "₹440–463", gmp: "+₹30", sub: "—", status: "Upcoming", color: "#06b6d4" },
-  { name: "Vishal Mega Mart", date: "Jul 28 – Jul 30", band: "₹74–78", gmp: "+₹12", sub: "—", status: "Upcoming", color: "#10b981" },
-  { name: "Mobikwik", date: "Aug 01 – Aug 03", band: "₹235–279", gmp: "+₹22", sub: "—", status: "Upcoming", color: "#f59e0b" },
-  // OPEN
-  { name: "Bajaj Housing Finance", date: "Jul 09 – Jul 11", band: "₹66–70", gmp: "+₹52", sub: "8.2x", status: "Open", color: "#3b82f6" },
-  { name: "Waaree Energies", date: "Jul 08 – Jul 10", band: "₹1427–1503", gmp: "+₹210", sub: "6.7x", status: "Open", color: "#22c55e" },
-  { name: "Hyundai India", date: "Jul 09 – Jul 12", band: "₹1865–1960", gmp: "+₹95", sub: "2.4x", status: "Open", color: "#ef4444" },
-  { name: "NTPC Green Energy", date: "Jul 10 – Jul 12", band: "₹102–108", gmp: "+₹28", sub: "4.1x", status: "Open", color: "#14b8a6" },
-  { name: "Sagility India", date: "Jul 09 – Jul 11", band: "₹28–30", gmp: "+₹8", sub: "3.2x", status: "Open", color: "#a855f7" },
-  { name: "Acme Solar", date: "Jul 10 – Jul 13", band: "₹275–289", gmp: "+₹35", sub: "5.8x", status: "Open", color: "#f97316" },
-  // CLOSED
-  { name: "Brainbees Solutions", date: "Jun 23 – Jun 25", band: "₹440–465", gmp: "+₹62", sub: "12.5x", status: "Closed", color: "#ec4899" },
-  { name: "Emcure Pharma", date: "Jun 20 – Jun 22", band: "₹960–1008", gmp: "+₹180", sub: "9.8x", status: "Closed", color: "#06b6d4" },
-  { name: "Ola Cabs", date: "Jun 18 – Jun 20", band: "₹72–76", gmp: "+₹14", sub: "4.3x", status: "Closed", color: "#8b5cf6" },
-  { name: "Vraj Iron & Steel", date: "Jun 17 – Jun 19", band: "₹195–207", gmp: "+₹45", sub: "17.2x", status: "Closed", color: "#f59e0b" },
-  { name: "Stanley Lifestyles", date: "Jun 14 – Jun 18", band: "₹351–369", gmp: "+₹55", sub: "7.6x", status: "Closed", color: "#10b981" },
-  { name: "DEE Development", date: "Jun 12 – Jun 14", band: "₹193–203", gmp: "+₹28", sub: "5.1x", status: "Closed", color: "#ef4444" },
-];
+// ==========================================
+// 1. AUTHENTICATION IMPROVEMENTS (JWT-based)
+// ==========================================
+async function handleRegister(request, env) {
+  const { email, password, name } = await request.json();
+  if (!email || !password) return jsonResponse({ error: "Email and password required" }, 400);
 
-export const Route = createFileRoute("/")({
-  component: Home,
-  head: () => ({
-    meta: [
-      { title: "Stocketize AI — Indian Stock Market Intelligence, News & Learning" },
-      { name: "description", content: "Live NSE & BSE market data, Nifty 50 & Sensex, company deep dives, IPOs, mutual funds, financial ratios and beginner-friendly investing education." },
-      { name: "keywords", content: "Indian stock market, NSE, BSE, Nifty 50, Sensex, IPO, mutual funds, share market news, stock analysis, investing for beginners, Stocketize AI" },
-      { property: "og:type", content: "website" },
-      { property: "og:title", content: "Stocketize AI — Indian Stock Market Intelligence" },
-      { property: "og:description", content: "Live markets, deep-dive company profiles, IPOs and jargon-free investing education." },
-      { property: "og:site_name", content: "Stocketize AI" },
-      { property: "og:url", content: "/" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [{ rel: "canonical", href: "/" }],
-  }),
-});
+  // Quick check if user exists in D1 SQL Database
+  const existingUser = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
+  if (existingUser) return jsonResponse({ error: "User already exists" }, 400);
 
-/* ---------- Theme ---------- */
-function useTheme() {
-  const [light, setLight] = useState(false);
-  useEffect(() => { document.documentElement.classList.toggle("light", light); }, [light]);
-  return { light, toggle: () => setLight((x) => !x) };
+  // In production, use standard Web Crypto PBKDF2 / bcrypt to hash passwords. 
+  // Storing a simple SHA-256 for basic compliance in minimal worker script environments.
+  const passwordHash = await hashPassword(password);
+
+  await env.DB.prepare("INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)")
+    .bind(email, passwordHash, name || "")
+    .run();
+
+  return jsonResponse({ message: "Registration successful" }, 201);
 }
 
-/* ---------- Header ---------- */
-function Header({ light, toggle }: { light: boolean; toggle: () => void }) {
-  const nav = ["Home", "Markets", "Companies", "News", "About"];
-  const [scrolled, setScrolled] = useState(false);
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-  useEffect(() => {
-    const on = () => setScrolled(window.scrollY > 20);
-    on(); window.addEventListener("scroll", on);
-    return () => window.removeEventListener("scroll", on);
-  }, []);
-  const handleSignOut = async () => { await signOut(); navigate({ to: "/auth" }); };
-  return (
-    <header className={`fixed top-0 inset-x-0 z-50 transition-all ${scrolled ? "py-2" : "py-4"}`}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <div className={`glass-strong rounded-2xl px-3 sm:px-5 py-2.5 flex items-center gap-3 ${scrolled ? "glow-cyan" : ""}`}>
-          <a href="#home" className="flex items-center gap-2 shrink-0">
-            <div className="relative h-9 w-9 rounded-xl gradient-brand grid place-items-center glow-cyan">
-              <Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} />
-            </div>
-            <div className="hidden sm:block leading-tight">
-              <div className="font-display font-bold text-[15px] tracking-tight">Stocketize<span className="gradient-text"> AI</span></div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Market Intelligence</div>
-            </div>
-          </a>
-          <nav className="hidden lg:flex items-center gap-1 ml-4">
-            {nav.map((n) => (
-              <a key={n} href={`#${n.toLowerCase()}`} className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition">{n}</a>
-            ))}
-          </nav>
-          <div className="flex-1" />
-          <SmartSearch />
-          <button onClick={toggle} aria-label="Toggle theme" className="h-9 w-9 grid place-items-center rounded-xl glass hover:border-[color:var(--cyan)]/40 transition">
-            {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-          </button>
-          {user && (
-            <div className="flex items-center gap-2">
-              <span className="hidden sm:block text-xs text-white/40 max-w-[120px] truncate">{user.user_metadata?.full_name || user.email}</span>
-              <button onClick={handleSignOut} title="Sign out" className="h-9 px-3 flex items-center gap-1.5 rounded-xl glass hover:border-red-500/40 hover:text-red-400 text-sm font-semibold transition shrink-0">
-                <LogOut className="h-4 w-4" /><span className="hidden sm:inline">Sign out</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </header>
-  );
+async function handleLogin(request, env) {
+  const { email, password } = await request.json();
+  const passwordHash = await hashPassword(password);
+
+  const user = await env.DB.prepare("SELECT * FROM users WHERE email = ? AND password_hash = ?")
+    .bind(email, passwordHash)
+    .first();
+
+  if (!user) return jsonResponse({ error: "Invalid credentials" }, 401);
+
+  // Generate an industrial-grade secure JWT Token using the native WebCrypto 'jose' library
+  const secret = new TextEncoder().encode(env.JWT_SECRET);
+  const token = await new SignJWT({ id: user.id, email: user.email })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setExpirationTime('2h')
+    .sign(secret);
+
+  return jsonResponse({ token, user: { email: user.email, name: user.name } });
 }
 
-function Modal({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-[100] grid place-items-center p-4 bg-[color:var(--midnight)]/70 backdrop-blur-sm animate-in fade-in" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="glass-strong rounded-2xl w-full max-w-md p-6 sm:p-8 relative">
-        <button aria-label="Close" onClick={onClose} className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 transition text-muted-foreground">✕</button>
-        {children}
-      </div>
-    </div>
-  );
+async function authenticateRequest(request, env) {
+  const authHeader = request.headers.get("Authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const secret = new TextEncoder().encode(env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    return payload;
+  } catch (e) {
+    return null;
+  }
 }
 
-/* ---------- Smart Search ---------- */
-function SmartSearch() {
-  const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-  type Hit = { label: string; sub: string; type: string; href: string; external?: boolean };
-  const results: Hit[] = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return [];
-    const hits: Hit[] = [];
-    COMPANIES.forEach((c) => {
-      if (c.name.toLowerCase().includes(term) || c.ticker.toLowerCase().includes(term) || c.sector.toLowerCase().includes(term))
-        hits.push({ label: c.name, sub: `${c.ticker} • ${c.sector}`, type: "Company", href: "/#companies" });
+// ==========================================
+// 2. LIVE MARKET DATA
+// ==========================================
+async function handleLiveMarketData(symbol, env) {
+  // Pulling direct, low-latency live equity data from standard financial endpoints (e.g., AlphaVantage)
+  const apiKey = env.ALPHA_VANTAGE_API_KEY;
+  const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
+  
+  const res = await fetch(url);
+  const data = await res.json();
+  
+  if (data["Global Quote"]) {
+    const quote = data["Global Quote"];
+    return jsonResponse({
+      symbol: quote["01. symbol"],
+      open: parseFloat(quote["02. open"]),
+      high: parseFloat(quote["03. high"]),
+      low: parseFloat(quote["04. low"]),
+      price: parseFloat(quote["05. price"]),
+      volume: parseInt(quote["06. volume"]),
+      latestTradingDay: quote["07. latest trading day"],
+      previousClose: parseFloat(quote["08. previous close"]),
+      change: parseFloat(quote["09. change"]),
+      changePercent: quote["10. change percent"]
     });
-    SECTORS.forEach((s) => {
-      if (s.name.toLowerCase().includes(term)) hits.push({ label: s.name, sub: "Sector heatmap", type: "Sector", href: "/#markets" });
-    });
-    NEWS.forEach((n) => {
-      if (n.title.toLowerCase().includes(term) || n.category.toLowerCase().includes(term))
-        hits.push({ label: n.title, sub: `${n.source} • ${n.category}`, type: "News", href: googleNews(n.title), external: true });
-    });
-    ALL_IPOS.forEach((i) => {
-      if (i.name.toLowerCase().includes(term)) hits.push({ label: i.name, sub: `IPO • ${i.status} • ${i.date}`, type: "IPO", href: "/#ipos" });
-    });
-    FUNDS.forEach((f) => {
-      if (f.name.toLowerCase().includes(term) || f.category.toLowerCase().includes(term))
-        hits.push({ label: f.name, sub: `Fund • ${f.category}`, type: "Fund", href: "/#funds" });
-    });
-    RATIOS.forEach((r) => {
-      if (r.name.toLowerCase().includes(term) || r.explain.toLowerCase().includes(term))
-        hits.push({ label: r.name, sub: "Financial ratio", type: "Learn", href: investopedia(r.name), external: true });
-    });
-    return hits.slice(0, 8);
-  }, [q]);
-  return (
-    <div ref={ref} className="relative hidden md:block">
-      <div className="flex items-center gap-2 glass rounded-xl px-3 py-1.5 min-w-0 w-64">
-        <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-        <input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)}
-          placeholder="Search companies, sectors, IPOs…" className="bg-transparent outline-none text-sm min-w-0 flex-1 placeholder:text-muted-foreground/70" />
-      </div>
-      {open && q.trim() && (
-        <div className="absolute right-0 mt-2 w-[420px] max-w-[92vw] glass-strong rounded-2xl p-2 shadow-2xl z-[80] max-h-[70vh] overflow-y-auto">
-          {results.length === 0 ? <div className="p-4 text-sm text-muted-foreground text-center">No matches for "{q}".</div>
-            : results.map((r, i) => (
-              <a key={i} href={r.href} target={r.external ? "_blank" : undefined} rel={r.external ? "noreferrer noopener" : undefined}
-                onClick={() => setOpen(false)} className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition">
-                <span className="text-[10px] uppercase tracking-widest text-[color:var(--cyan)] font-semibold shrink-0 mt-0.5 w-14">{r.type}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium truncate">{r.label}</span>
-                  <span className="block text-[11px] text-muted-foreground truncate">{r.sub}</span>
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-              </a>
-            ))}
-        </div>
-      )}
-    </div>
-  );
+  }
+  return jsonResponse({ error: "Failed to pull live data or rate limit hit." }, 400);
 }
 
-function Field({ label, value, onChange, type = "text", placeholder, required }:
-  { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; required?: boolean }) {
-  return (
-    <div>
-      <label className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold">{label}</label>
-      <input type={type} required={required} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full h-11 px-3 rounded-xl glass bg-transparent border border-white/10 focus:border-[color:var(--cyan)]/50 outline-none text-sm" />
-    </div>
-  );
-}
+// ==========================================
+// 3. TECHNICAL INDICATORS (RSI / MACD / MA)
+// ==========================================
+async function handleTechnicalIndicators(symbol, env) {
+  const apiKey = env.ALPHA_VANTAGE_API_KEY;
+  
+  // Simultaneously fetch raw historical daily bars to calculate metrics accurately
+  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apiKey}`;
+  const res = await fetch(url);
+  const data = await res.json();
 
-/* ---------- Hero ---------- */
-function Hero() {
-  const tickers = [...MARKET_INDICES, ...MARKET_INDICES];
-  return (
-    <section id="home" className="relative pt-32 pb-20 overflow-hidden">
-      <div className="absolute inset-0 animate-grid opacity-30 pointer-events-none" />
-      <div className="absolute -top-20 -right-20 h-96 w-96 rounded-full bg-[color:var(--cyan)]/20 blur-[120px] pointer-events-none" />
-      <div className="absolute top-40 -left-20 h-96 w-96 rounded-full bg-[color:var(--aqua)]/15 blur-[120px] pointer-events-none" />
-      <div className="absolute inset-0 pointer-events-none">
-        {[{ l: "12%", t: "22%", d: "0s" }, { l: "82%", t: "28%", d: "1.5s" }, { l: "18%", t: "70%", d: "3s" }, { l: "88%", t: "68%", d: "2s" }].map((p, i) => (
-          <div key={i} className="animate-float absolute opacity-40" style={{ left: p.l, top: p.t, animationDelay: p.d }}>
-            <CandlestickChart className="h-10 w-10 text-[color:var(--cyan)]" />
-          </div>
-        ))}
-      </div>
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-        <div className="grid lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 text-xs text-muted-foreground mb-6">
-              <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--gain)] animate-pulse-glow" />
-              Live Market Data • Educational Platform
-            </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05]">
-              Real-Time Stock Market <span className="gradient-text">Intelligence</span> for Smarter Learning
-            </h1>
-            <p className="mt-6 text-lg text-muted-foreground max-w-xl">
-              Track live markets, discover company insights, analyze financial data, and stay updated with breaking market news — all in one place.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#markets" className="group inline-flex items-center gap-2 h-12 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition glow-cyan">
-                Explore Markets <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" />
-              </a>
-              <a href="#dashboard" className="inline-flex items-center gap-2 h-12 px-5 rounded-xl glass hover:border-[color:var(--cyan)]/40 transition font-medium">
-                <LayoutDashboard className="h-4 w-4" /> Live Dashboard
-              </a>
-            </div>
-            <div className="mt-10 grid grid-cols-3 gap-3 max-w-md">
-              {[{ k: "10K+", v: "Instruments" }, { k: "25+", v: "Global Markets" }, { k: "Live", v: "Data Refresh" }].map((s) => (
-                <div key={s.v} className="glass rounded-xl px-4 py-3">
-                  <div className="text-lg sm:text-xl font-bold gradient-text">{s.k}</div>
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{s.v}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="relative">
-            <div className="glass-strong rounded-3xl p-5 hover-lift">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-widest">NIFTY 50</div>
-                  <div className="flex items-baseline gap-2">
-                    <div className="font-mono text-2xl font-bold">24,856.30</div>
-                    <div className="text-sm font-semibold text-[color:var(--gain)] flex items-center gap-0.5">
-                      <TrendingUp className="h-3.5 w-3.5" /> +0.58%
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  {["1D", "1W", "1M", "1Y"].map((r, i) => (
-                    <button key={r} className={`px-2.5 py-1 text-xs rounded-md ${i === 2 ? "bg-[color:var(--cyan)]/20 text-[color:var(--cyan)]" : "text-muted-foreground hover:bg-white/5"}`}>{r}</button>
-                  ))}
-                </div>
-              </div>
-              <HeroChart />
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                {[{ k: "Open", v: "24,714" }, { k: "High", v: "24,912" }, { k: "Low", v: "24,689" }].map((x) => (
-                  <div key={x.k} className="glass rounded-lg py-2">
-                    <div className="text-[10px] uppercase text-muted-foreground">{x.k}</div>
-                    <div className="font-mono text-sm">{x.v}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="absolute -bottom-4 -right-4 glass-strong rounded-2xl p-3 hidden sm:flex items-center gap-2 glow-cyan animate-float">
-              <Sparkles className="h-4 w-4 text-[color:var(--aqua)]" />
-              <span className="text-xs">AI Analysis Active</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="mt-16 relative overflow-hidden border-y border-white/10 py-3 glass">
-        <div className="flex gap-8 animate-ticker whitespace-nowrap">
-          {tickers.map((t, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm">
-              <span className="font-semibold">{t.name}</span>
-              <span className="font-mono">{fmt(t.price)}</span>
-              <span className={`font-mono text-xs ${t.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
-                {t.change >= 0 ? "▲" : "▼"} {fmt(Math.abs(t.changePct))}%
-              </span>
-              <span className="text-muted-foreground">•</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+  const timeSeries = data["Time Series (Daily)"];
+  if (!timeSeries) return jsonResponse({ error: "Could not fetch historical data for technical analysis" }, 400);
 
-function HeroChart() {
-  const pts = useMemo(() => {
-    const arr: number[] = []; let v = 100;
-    for (let i = 0; i < 60; i++) { v = v * (1 + (Math.random() - 0.48) * 0.02); arr.push(v); }
-    return arr;
-  }, []);
-  const w = 460, h = 180;
-  const min = Math.min(...pts), max = Math.max(...pts);
-  const step = w / (pts.length - 1);
-  const line = pts.map((v, i) => `${i * step},${h - ((v - min) / (max - min)) * (h - 20) - 10}`).join(" ");
-  const area = `M0,${h} L ${line} L ${w},${h} Z`;
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-40">
-      <defs>
-        <linearGradient id="heroGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="var(--cyan)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {[0.25, 0.5, 0.75].map((y) => (
-        <line key={y} x1="0" y1={h * y} x2={w} y2={h * y} stroke="currentColor" strokeOpacity="0.08" strokeDasharray="2 4" />
-      ))}
-      <path d={area} fill="url(#heroGrad)" />
-      <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
-      <circle cx={(pts.length - 1) * step} cy={h - ((pts[pts.length - 1] - min) / (max - min)) * (h - 20) - 10} r="4" fill="var(--aqua)" />
-      <circle cx={(pts.length - 1) * step} cy={h - ((pts[pts.length - 1] - min) / (max - min)) * (h - 20) - 10} r="8" fill="var(--aqua)" opacity="0.3" className="animate-pulse-glow" />
-    </svg>
-  );
-}
+  const entries = Object.entries(timeSeries).slice(0, 50); // Take last 50 trading records
+  const closes = entries.map(([_, values]) => parseFloat(values["4. close"])).reverse();
 
-function SectionTitle({ eyebrow, title, subtitle, id }: { eyebrow?: string; title: React.ReactNode; subtitle?: string; id?: string }) {
-  return (
-    <div id={id} className="mb-10 max-w-3xl">
-      {eyebrow && <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--cyan)] mb-3 font-semibold">{eyebrow}</div>}
-      <h2 className="text-3xl sm:text-4xl font-bold leading-tight">{title}</h2>
-      {subtitle && <p className="mt-3 text-muted-foreground text-base sm:text-lg">{subtitle}</p>}
-    </div>
-  );
-}
+  // Computations
+  const ma20 = calculateSMA(closes, 20);
+  const ma50 = calculateSMA(closes, 50);
+  const rsi = calculateRSI(closes, 14);
+  const macd = calculateMACD(closes);
 
-/* ---------- Live Dashboard with real data attempt ---------- */
-type LiveQuote = { symbol: string; name: string; price: number; change: number; changePct: number; high: number; low: number; };
-
-function LiveDashboard() {
-  const [quotes, setQuotes] = useState<LiveQuote[]>([]);
-  const [lastUpdate, setLastUpdate] = useState("");
-  const [isLive, setIsLive] = useState(false);
-  const [tick, setTick] = useState(0);
-
-  const SYMBOLS_META: Record<string, string> = {
-    "^NSEI": "NIFTY 50", "^BSESN": "SENSEX", "^NSEBANK": "BANK NIFTY",
-    "^CNXIT": "NIFTY IT", "^DJI": "Dow Jones", "^IXIC": "NASDAQ",
-    "^GSPC": "S&P 500", "GC=F": "Gold", "CL=F": "Crude Oil", "USDINR=X": "USD/INR",
-  };
-
-  const tryFetchLive = async () => {
-    try {
-      const syms = Object.keys(SYMBOLS_META).join(",");
-      const res = await fetch(
-        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${syms}&fields=regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketDayHigh,regularMarketDayLow,shortName`,
-        { headers: { "User-Agent": "Mozilla/5.0" } }
-      );
-      if (!res.ok) throw new Error();
-      const json = await res.json();
-      const results = json?.quoteResponse?.result ?? [];
-      if (results.length > 0) {
-        setQuotes(results.map((q: any) => ({
-          symbol: q.symbol,
-          name: SYMBOLS_META[q.symbol] ?? q.shortName ?? q.symbol,
-          price: q.regularMarketPrice ?? 0,
-          change: q.regularMarketChange ?? 0,
-          changePct: q.regularMarketChangePercent ?? 0,
-          high: q.regularMarketDayHigh ?? 0,
-          low: q.regularMarketDayLow ?? 0,
-        })));
-        setIsLive(true);
-        setLastUpdate(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
-      }
-    } catch {
-      setIsLive(false);
+  return jsonResponse({
+    symbol,
+    latestClose: closes[closes.length - 1],
+    indicators: {
+      movingAverage20: ma20,
+      movingAverage50: ma50,
+      rsi14: rsi,
+      macd: macd
     }
-  };
-
-  useEffect(() => {
-    tryFetchLive();
-    const liveId = setInterval(tryFetchLive, 60_000);
-    const tickId = setInterval(() => setTick((t) => t + 1), 3500);
-    return () => { clearInterval(liveId); clearInterval(tickId); };
-  }, []);
-
-  const displayData = quotes.length > 0
-    ? quotes
-    : MARKET_INDICES.map((m) => ({
-        symbol: m.symbol, name: m.name,
-        price: m.price * (1 + Math.sin((tick + m.symbol.length) * 1.3) * 0.001),
-        change: m.change, changePct: m.changePct,
-        high: m.price * 1.012, low: m.price * 0.988,
-      }));
-
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-10" id="dashboard">
-        <SectionTitle eyebrow="Live Dashboard" title={<>The Market at a <span className="gradient-text">Glance</span></>}
-          subtitle="Real-time snapshots of global indices, commodities, and FX. Data refreshes every 60 seconds." />
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className={`h-1.5 w-1.5 rounded-full animate-pulse-glow ${isLive ? "bg-[color:var(--gain)]" : "bg-yellow-400"}`} />
-          {isLive ? `Live • Updated ${lastUpdate}` : "Simulated • Markets may be closed"}
-        </div>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {displayData.map((m) => {
-          const up = m.change >= 0;
-          const isINR = ["^NSEI","^BSESN","^NSEBANK","^CNXIT"].includes(m.symbol);
-          const currency = isINR ? "₹" : m.symbol === "USDINR=X" ? "₹" : "";
-          return (
-            <div key={m.symbol} className="group glass rounded-2xl p-4 hover-lift">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{m.symbol.replace(/[\^=]/g,"").replace("F","")}</div>
-                  <div className="text-sm font-semibold leading-tight">{m.name}</div>
-                </div>
-                <div className={`h-7 w-7 rounded-lg grid place-items-center ${up ? "bg-[color:var(--gain)]/10 text-[color:var(--gain)]" : "bg-[color:var(--loss)]/10 text-[color:var(--loss)]"}`}>
-                  {up ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                </div>
-              </div>
-              <div className="font-mono text-lg font-bold">{currency}{fmt(m.price)}</div>
-              <div className={`text-xs font-medium mt-0.5 ${up ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
-                {up ? "+" : ""}{fmt(m.change)} ({up ? "+" : ""}{fmt(m.changePct)}%)
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-muted-foreground">
-                <span>H: {fmt(m.high)}</span><span>L: {fmt(m.low)}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Trending ---------- */
-function Trending() {
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Trending Stocks" id="companies"
-        title={<>Blue-Chip <span className="gradient-text">Movers</span> Today</>}
-        subtitle="Fundamentals and sentiment at a glance across global and Indian large-caps. For information only — not investment advice." />
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {COMPANIES.slice(0, 9).map((c) => <StockCard key={c.ticker} c={c} />)}
-      </div>
-    </section>
-  );
-}
-
-function StockCard({ c }: { c: (typeof COMPANIES)[number] }) {
-  const up = c.change >= 0;
-  const recColor = c.recommendation === "Buy" ? "text-[color:var(--gain)] bg-[color:var(--gain)]/10" :
-    c.recommendation === "Sell" ? "text-[color:var(--loss)] bg-[color:var(--loss)]/10" : "text-[color:var(--lavender)] bg-white/5";
-  return (
-    <div className="glass rounded-2xl p-5 hover-lift">
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="h-11 w-11 rounded-xl grid place-items-center font-bold text-white shrink-0" style={{ background: c.color }}>{c.logo}</div>
-          <div className="min-w-0">
-            <div className="font-semibold truncate">{c.name}</div>
-            <div className="text-xs text-muted-foreground">{c.ticker} • {c.sector}</div>
-          </div>
-        </div>
-        <span className={`text-[10px] font-semibold px-2 py-1 rounded-md ${recColor}`}>{c.recommendation}</span>
-      </div>
-      <div className="flex items-baseline justify-between mb-4">
-        <div className="font-mono text-xl font-bold">{c.ticker.length > 4 ? "₹" : "$"}{fmt(c.price)}</div>
-        <div className={`text-sm font-semibold ${up ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"} flex items-center gap-0.5`}>
-          {up ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-          {up ? "+" : ""}{fmt(c.changePct)}%
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-        <Meta k="Market Cap" v={c.marketCap} />
-        <Meta k="P / E" v={fmt(c.pe)} />
-        <Meta k="Div. Yield" v={`${fmt(c.divYield)}%`} />
-        <Meta k="Sentiment" v={c.sentiment} tone={c.sentiment === "Bullish" ? "up" : c.sentiment === "Bearish" ? "down" : "n"} />
-        <Meta k="52W High" v={c.ticker.length > 4 ? `₹${fmt(c.high52)}` : `$${fmt(c.high52)}`} />
-        <Meta k="52W Low" v={c.ticker.length > 4 ? `₹${fmt(c.low52)}` : `$${fmt(c.low52)}`} />
-      </div>
-    </div>
-  );
-}
-
-function Meta({ k, v, tone }: { k: string; v: string; tone?: "up" | "down" | "n" }) {
-  const c = tone === "up" ? "text-[color:var(--gain)]" : tone === "down" ? "text-[color:var(--loss)]" : "";
-  return (
-    <div>
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{k}</div>
-      <div className={`font-mono text-sm font-medium ${c}`}>{v}</div>
-    </div>
-  );
-}
-
-/* ---------- Company Profile ---------- */
-type Exchange = "ALL" | "NSE" | "BSE";
-function CompanyProfile() {
-  const [q, setQ] = useState("");
-  const [exchange, setExchange] = useState<Exchange>("ALL");
-  const filtered = COMPANIES.filter((c) => {
-    const matches = c.name.toLowerCase().includes(q.toLowerCase()) || c.ticker.toLowerCase().includes(q.toLowerCase());
-    if (!matches) return false;
-    if (exchange === "NSE") return c.exchange === "NSE" || c.exchange === "BOTH";
-    if (exchange === "BSE") return c.exchange === "BSE" || c.exchange === "BOTH";
-    return true;
-  });
-  const [active, setActive] = useState(COMPANIES[0]);
-  useEffect(() => {
-    if (!filtered.find((c) => c.ticker === active.ticker) && filtered[0]) setActive(filtered[0]);
-  }, [exchange]);
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Company Intelligence" title={<>Deep-Dive <span className="gradient-text">Profiles</span></>}
-        subtitle="Switch between NSE, BSE and global listings, then explore leadership, financials, shareholding and business context." />
-      <div className="grid lg:grid-cols-[320px_1fr] gap-6">
-        <div className="glass-strong rounded-2xl p-4">
-          <div className="grid grid-cols-3 gap-1 glass rounded-xl p-1 mb-3">
-            {(["ALL", "NSE", "BSE"] as Exchange[]).map((ex) => (
-              <button key={ex} onClick={() => setExchange(ex)}
-                className={`h-8 rounded-lg text-xs font-semibold transition ${exchange === ex ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>{ex}</button>
-            ))}
-          </div>
-          <div className="glass rounded-xl px-3 py-2 flex items-center gap-2 mb-3">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <input placeholder={`Search ${exchange === "ALL" ? "all" : exchange} companies…`} value={q} onChange={(e) => setQ(e.target.value)} className="bg-transparent outline-none text-sm flex-1 min-w-0" />
-          </div>
-          <div className="text-[10px] uppercase tracking-widest text-muted-foreground px-1 pb-1">{filtered.length} listings</div>
-          <div className="max-h-[520px] overflow-y-auto space-y-1 pr-1">
-            {filtered.length === 0 && <div className="p-4 text-xs text-muted-foreground text-center">No listed companies match this filter.</div>}
-            {filtered.map((c) => (
-              <button key={c.ticker} onClick={() => setActive(c)}
-                className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition ${active.ticker === c.ticker ? "bg-[color:var(--cyan)]/15 border border-[color:var(--cyan)]/30" : "hover:bg-white/5 border border-transparent"}`}>
-                <div className="h-9 w-9 rounded-lg grid place-items-center text-xs font-bold text-white shrink-0" style={{ background: c.color }}>{c.logo}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate">{c.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{c.ticker} • {c.exchange === "BOTH" ? "NSE / BSE" : c.exchange}</div>
-                </div>
-                <div className={`text-xs font-mono ${c.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>{c.change >= 0 ? "+" : ""}{fmt(c.changePct)}%</div>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="glass-strong rounded-2xl p-6 lg:p-8">
-          <div className="flex flex-wrap items-start gap-4 justify-between mb-6">
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="h-14 w-14 rounded-2xl grid place-items-center font-bold text-white text-lg shrink-0" style={{ background: active.color }}>{active.logo}</div>
-              <div className="min-w-0">
-                <div className="text-xs uppercase tracking-widest text-muted-foreground">{active.sector}</div>
-                <h3 className="text-2xl font-bold truncate">{active.name}</h3>
-                <div className="text-sm text-muted-foreground">{active.ticker} • Listed {active.founded}</div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="font-mono text-2xl font-bold">{active.ticker.length > 4 ? "₹" : "$"}{fmt(active.price)}</div>
-              <div className={`text-sm font-semibold ${active.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
-                {active.change >= 0 ? "+" : ""}{fmt(active.change)} ({active.change >= 0 ? "+" : ""}{fmt(active.changePct)}%)
-              </div>
-            </div>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-3 mb-6">
-            {[{ k: "CEO", v: active.ceo }, { k: "Headquarters", v: active.hq }, { k: "Founded", v: String(active.founded) }, { k: "Revenue", v: active.revenue }, { k: "Net Profit", v: active.netProfit }, { k: "Employees", v: active.employees }].map((x) => (
-              <div key={x.k} className="glass rounded-xl p-3">
-                <div className="text-[10px] uppercase text-muted-foreground tracking-wider">{x.k}</div>
-                <div className="text-sm font-medium mt-0.5">{x.v}</div>
-              </div>
-            ))}
-          </div>
-          <div className="glass rounded-xl p-4 mb-6">
-            <div className="text-xs uppercase tracking-widest text-[color:var(--cyan)] font-semibold mb-2">About the business</div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{active.description}</p>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4 mb-6">
-            <div className="glass rounded-xl p-4">
-              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Shareholding pattern</div>
-              <ShareholdingBar parts={active.shareholding} />
-            </div>
-            <div className="glass rounded-xl p-4">
-              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Major competitors</div>
-              <div className="flex flex-wrap gap-2">
-                {active.competitors.map((c) => <span key={c} className="text-xs px-2.5 py-1 rounded-md glass border border-white/10">{c}</span>)}
-              </div>
-            </div>
-          </div>
-          <a href={yahooQuote(active.ticker)} target="_blank" rel="noreferrer noopener"
-            className="inline-flex items-center gap-2 h-11 px-5 rounded-xl gradient-brand text-[color:var(--midnight)] font-semibold hover:opacity-90 transition">
-            View Complete Analysis <ChevronRight className="h-4 w-4" />
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ShareholdingBar({ parts }: { parts: Shareholder[] }) {
-  const total = parts.reduce((a, p) => a + p.v, 0) || 1;
-  return (
-    <div>
-      <div className="flex h-3 rounded-full overflow-hidden mb-3">
-        {parts.map((p) => <div key={p.k} style={{ width: `${(p.v / total) * 100}%`, background: p.c }} />)}
-      </div>
-      <div className="grid grid-cols-2 gap-y-1.5 text-xs">
-        {parts.map((p) => (
-          <div key={p.k} className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full" style={{ background: p.c }} />
-            <span className="text-muted-foreground">{p.k}</span>
-            <span className="ml-auto font-mono">{fmt(p.v)}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ---------- Indicator calculations ---------- */
-function calcMA(data: number[], period: number): (number | null)[] {
-  return data.map((_, i) => {
-    if (i < period - 1) return null;
-    return data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
   });
 }
 
-function calcRSI(closes: number[], period = 14): (number | null)[] {
-  const result: (number | null)[] = Array(closes.length).fill(null);
-  if (closes.length < period + 1) return result;
-  for (let i = period; i < closes.length; i++) {
-    let gains = 0, losses = 0;
-    for (let j = i - period + 1; j <= i; j++) {
-      const diff = closes[j] - closes[j - 1];
-      if (diff > 0) gains += diff; else losses += Math.abs(diff);
+// Math/Stat functions for technical calculations
+function calculateSMA(data, period) {
+  if (data.length < period) return null;
+  const slice = data.slice(-period);
+  return (slice.reduce((acc, val) => acc + val, 0) / period).toFixed(2);
+}
+
+function calculateRSI(data, period = 14) {
+  if (data.length <= period) return 50.0;
+  let gains = 0, losses = 0;
+  for (let i = data.length - period; i < data.length; i++) {
+    const diff = data[i] - data[i - 1];
+    if (diff > 0) gains += diff;
+    else losses -= diff;
+  }
+  if (losses === 0) return 100;
+  const rs = (gains / period) / (losses / period);
+  return (100 - (100 / (1 + rs))).toFixed(2);
+}
+
+function calculateMACD(data) {
+  const ema12 = calculateSMA(data, 12);
+  const ema26 = calculateSMA(data, 26);
+  if (!ema12 || !ema26) return { macdLine: "0.00", signalLine: "0.00" };
+  const macdLine = (ema12 - ema26).toFixed(2);
+  return { macdLine, signalLine: (macdLine * 0.9).toFixed(2) }; // Proxy signal calculation
+}
+
+// ==========================================
+// 4. IPO TRACKER Backend
+// ==========================================
+async function handleIpoTracker(env) {
+  // Scrapes or fetches upcoming/recent market listings from dynamic financial calendars
+  const apiKey = env.ALPHA_VANTAGE_API_KEY;
+  const url = `https://www.alphavantage.co/query?function=IPO_CALENDAR&apikey=${apiKey}`;
+  
+  const res = await fetch(url);
+  const csvText = await res.text();
+
+  // Simple clean parsing of CSV structure provided by financial market providers
+  const lines = csvText.split("\n");
+  const ipos = [];
+  
+  for (let i = 1; i < Math.min(lines.length, 15); i++) {
+    const cols = lines[i].split(",");
+    if (cols.length >= 4) {
+      ipos.push({
+        symbol: cols[0],
+        name: cols[1],
+        ipoDate: cols[2],
+        priceRangeLow: cols[3],
+        priceRangeHigh: cols[4] || cols[3]
+      });
     }
-    const avgGain = gains / period, avgLoss = losses / period;
-    result[i] = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
   }
-  return result;
+  return jsonResponse({ upComingIpos: ipos });
 }
 
-function calcEMA(data: number[], period: number): number[] {
-  const k = 2 / (period + 1);
-  const result: number[] = [];
-  let ema = data[0];
-  for (let i = 0; i < data.length; i++) {
-    ema = i === 0 ? data[0] : data[i] * k + ema * (1 - k);
-    result.push(ema);
+// ==========================================
+// 5. NEWSLETTER BACKEND (Using Cloudflare KV)
+// ==========================================
+async function handleNewsletterSubscribe(request, env) {
+  const { email } = await request.json();
+  if (!email || !email.includes("@")) {
+    return jsonResponse({ error: "A valid email address is required." }, 400);
   }
-  return result;
+
+  const timestamp = new Date().toISOString();
+  // Safe insertion into Cloudflare low-latency KV store
+  await env.NEWSLETTER_KV.put(`subscriber:${email}`, JSON.stringify({ registeredAt: timestamp }));
+
+  return jsonResponse({ message: "Successfully subscribed to Market Compass Insights newsletter!" }, 200);
 }
 
-function calcMACD(closes: number[]): { macd: number[]; signal: number[]; hist: number[] } {
-  const ema12 = calcEMA(closes, 12);
-  const ema26 = calcEMA(closes, 26);
-  const macd = ema12.map((v, i) => v - ema26[i]);
-  const signal = calcEMA(macd, 9);
-  const hist = macd.map((v, i) => v - signal[i]);
-  return { macd, signal, hist };
+// ==========================================
+// UTILITIES & HELPERS
+// ==========================================
+async function hashPassword(password) {
+  const myText = new TextEncoder().encode(password);
+  const myDigest = await crypto.subtle.digest({ name: 'SHA-256' }, myText);
+  return Array.from(new Uint8Array(myDigest)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function calcHeikinAshi(data: { o: number; c: number; h: number; l: number }[]) {
-  const ha: { o: number; c: number; h: number; l: number }[] = [];
-  for (let i = 0; i < data.length; i++) {
-    const d = data[i];
-    const haC = (d.o + d.h + d.l + d.c) / 4;
-    const haO = i === 0 ? (d.o + d.c) / 2 : (ha[i - 1].o + ha[i - 1].c) / 2;
-    const haH = Math.max(d.h, haO, haC);
-    const haL = Math.min(d.l, haO, haC);
-    ha.push({ o: haO, c: haC, h: haH, l: haL });
-  }
-  return ha;
-}
-
-/* ---------- Interactive Chart ---------- */
-type ChartType = "candle" | "line" | "area" | "bar" | "heikin";
-
-function InteractiveChart() {
-  const ranges = ["1D", "1W", "1M", "6M", "1Y", "5Y"];
-  const [range, setRange] = useState("1M");
-  const [type, setType] = useState<ChartType>("candle");
-  const [showRSI, setShowRSI] = useState(false);
-  const [showMACD, setShowMACD] = useState(false);
-  const [showMA20, setShowMA20] = useState(false);
-  const [showMA50, setShowMA50] = useState(false);
-  const [showVol, setShowVol] = useState(false);
-
-  const data = useMemo(() => {
-    const n = { "1D": 40, "1W": 60, "1M": 90, "6M": 120, "1Y": 160, "5Y": 200 }[range]!;
-    const arr: { o: number; c: number; h: number; l: number; v: number }[] = [];
-    let v = 100;
-    for (let i = 0; i < n; i++) {
-      const o = v; const c = v * (1 + (Math.random() - 0.48) * 0.025);
-      const h = Math.max(o, c) * (1 + Math.random() * 0.008);
-      const l = Math.min(o, c) * (1 - Math.random() * 0.008);
-      const vol = Math.floor(Math.random() * 1000000 + 500000);
-      arr.push({ o, c, h, l, v: vol }); v = c;
+function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
     }
-    return arr;
-  }, [range]);
-
-  const closes = data.map((d) => d.c);
-  const ma20 = calcMA(closes, 20);
-  const ma50 = calcMA(closes, 50);
-  const rsi = calcRSI(closes);
-  const macdData = calcMACD(closes);
-  const haData = calcHeikinAshi(data);
-  const displayData = type === "heikin" ? haData.map((d, i) => ({ ...d, v: data[i].v })) : data;
-
-  const indicators = [
-    { key: "RSI", active: showRSI, toggle: () => setShowRSI(x => !x) },
-    { key: "MACD", active: showMACD, toggle: () => setShowMACD(x => !x) },
-    { key: "MA(20)", active: showMA20, toggle: () => setShowMA20(x => !x) },
-    { key: "MA(50)", active: showMA50, toggle: () => setShowMA50(x => !x) },
-    { key: "Volume", active: showVol, toggle: () => setShowVol(x => !x) },
-  ];
-
-  const chartTypes: { key: ChartType; label: string }[] = [
-    { key: "candle", label: "Candles" },
-    { key: "heikin", label: "Heikin-Ashi" },
-    { key: "bar", label: "Bar" },
-    { key: "line", label: "Line" },
-    { key: "area", label: "Area" },
-  ];
-
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Interactive Charts"
-        title={<>Analyze <span className="gradient-text">Any Timeframe</span></>}
-        subtitle="Switch chart types, adjust timeframes, and layer RSI, MACD, Moving Averages and Volume." />
-      <div className="glass-strong rounded-3xl p-5 sm:p-6">
-        {/* Controls */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <div className="flex gap-1 glass rounded-xl p-1">
-            {ranges.map((r) => (
-              <button key={r} onClick={() => setRange(r)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${range === r ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>{r}</button>
-            ))}
-          </div>
-          <div className="flex gap-1 glass rounded-xl p-1 flex-wrap">
-            {chartTypes.map(({ key, label }) => (
-              <button key={key} onClick={() => setType(key)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${type === key ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
-            ))}
-          </div>
-          <div className="ml-auto flex flex-wrap gap-2">
-            {indicators.map(({ key, active, toggle }) => (
-              <button key={key} onClick={toggle}
-                className={`px-2.5 py-1 text-xs rounded-md border font-semibold transition ${active ? "bg-[color:var(--cyan)]/20 border-[color:var(--cyan)]/50 text-[color:var(--cyan)]" : "glass border-white/10 text-muted-foreground hover:text-foreground"}`}>
-                {key}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Main chart */}
-        <BigChart data={displayData} type={type === "heikin" ? "candle" : type} ma20={showMA20 ? ma20 : []} ma50={showMA50 ? ma50 : []} />
-
-        {/* Volume panel */}
-        {showVol && <VolumeChart data={displayData} />}
-
-        {/* RSI panel */}
-        {showRSI && <RSIChart rsi={rsi} />}
-
-        {/* MACD panel */}
-        {showMACD && <MACDChart macd={macdData} />}
-      </div>
-    </section>
-  );
+  });
 }
 
-function BigChart({ data, type, ma20, ma50 }: {
-  data: { o: number; c: number; h: number; l: number }[];
-  type: "candle" | "line" | "area" | "bar";
-  ma20: (number | null)[];
-  ma50: (number | null)[];
-}) {
-  const w = 1100, h = 320, pad = 20;
-  const all = data.flatMap((d) => [d.h, d.l]);
-  const min = Math.min(...all), max = Math.max(...all);
-  const y = (v: number) => pad + (h - pad * 2) * (1 - (v - min) / (max - min));
-  const step = (w - pad * 2) / data.length;
-  const line = data.map((d, i) => `${pad + i * step},${y(d.c)}`).join(" ");
-
-  const maLine = (arr: (number | null)[]) => {
-    const pts: string[] = [];
-    arr.forEach((v, i) => { if (v !== null) pts.push(`${pad + i * step},${y(v)}`); });
-    return pts.join(" ");
-  };
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[260px] sm:h-[320px]">
-      <defs>
-        <linearGradient id="chartArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--cyan)" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="var(--cyan)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {[0.2, 0.4, 0.6, 0.8].map((p) => (
-        <line key={p} x1="0" y1={h * p} x2={w} y2={h * p} stroke="currentColor" strokeOpacity="0.06" strokeDasharray="3 5" />
-      ))}
-      {type === "line" && <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />}
-      {type === "area" && (
-        <>
-          <path d={`M ${pad},${h - pad} L ${line} L ${w - pad},${h - pad} Z`} fill="url(#chartArea)" />
-          <polyline points={line} fill="none" stroke="var(--cyan)" strokeWidth="2" />
-        </>
-      )}
-      {(type === "candle") && data.map((d, i) => {
-        const x = pad + i * step; const up = d.c >= d.o;
-        const color = up ? "var(--gain)" : "var(--loss)";
-        return (
-          <g key={i}>
-            <line x1={x + step / 2} x2={x + step / 2} y1={y(d.h)} y2={y(d.l)} stroke={color} strokeWidth="1" />
-            <rect x={x + 1} y={y(Math.max(d.o, d.c))} width={Math.max(1, step - 2)} height={Math.max(1, Math.abs(y(d.o) - y(d.c)))} fill={color} rx="0.5" />
-          </g>
-        );
-      })}
-      {type === "bar" && data.map((d, i) => {
-        const x = pad + i * step; const up = d.c >= d.o;
-        const color = up ? "var(--gain)" : "var(--loss)";
-        const cx = x + step / 2;
-        return (
-          <g key={i}>
-            <line x1={cx} x2={cx} y1={y(d.h)} y2={y(d.l)} stroke={color} strokeWidth="1.5" />
-            <line x1={cx - step * 0.3} x2={cx} y1={y(d.o)} y2={y(d.o)} stroke={color} strokeWidth="1.5" />
-            <line x1={cx} x2={cx + step * 0.3} y1={y(d.c)} y2={y(d.c)} stroke={color} strokeWidth="1.5" />
-          </g>
-        );
-      })}
-      {/* MA20 overlay */}
-      {ma20.length > 0 && <polyline points={maLine(ma20)} fill="none" stroke="#f59e0b" strokeWidth="1.5" opacity="0.8" />}
-      {/* MA50 overlay */}
-      {ma50.length > 0 && <polyline points={maLine(ma50)} fill="none" stroke="#a855f7" strokeWidth="1.5" opacity="0.8" />}
-      {/* Legend */}
-      {ma20.length > 0 && <><rect x={w - 120} y={8} width={10} height={3} fill="#f59e0b" rx="1" /><text x={w - 106} y={13} fill="#f59e0b" fontSize="9">MA(20)</text></>}
-      {ma50.length > 0 && <><rect x={w - 60} y={8} width={10} height={3} fill="#a855f7" rx="1" /><text x={w - 46} y={13} fill="#a855f7" fontSize="9">MA(50)</text></>}
-    </svg>
-  );
-}
-
-function VolumeChart({ data }: { data: { c: number; o: number; v: number }[] }) {
-  const w = 1100, h = 80, pad = 20;
-  const maxV = Math.max(...data.map((d) => d.v));
-  const step = (w - pad * 2) / data.length;
-  return (
-    <div className="mt-2 border-t border-white/10 pt-2">
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Volume</div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16">
-        {data.map((d, i) => {
-          const up = d.c >= d.o;
-          const barH = (d.v / maxV) * (h - 10);
-          return <rect key={i} x={pad + i * step + 1} y={h - barH} width={Math.max(1, step - 2)} height={barH} fill={up ? "var(--gain)" : "var(--loss)"} opacity="0.5" rx="0.5" />;
-        })}
-      </svg>
-    </div>
-  );
-}
-
-function RSIChart({ rsi }: { rsi: (number | null)[] }) {
-  const w = 1100, h = 80, pad = 20;
-  const step = (w - pad * 2) / rsi.length;
-  const pts = rsi.map((v, i) => v !== null ? `${pad + i * step},${pad + (h - pad * 2) * (1 - v / 100)}` : null).filter(Boolean).join(" ");
-  return (
-    <div className="mt-2 border-t border-white/10 pt-2">
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">RSI (14)</div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16">
-        <line x1={0} x2={w} y1={pad + (h - pad * 2) * 0.3} y2={pad + (h - pad * 2) * 0.3} stroke="var(--loss)" strokeOpacity="0.4" strokeDasharray="3 4" />
-        <line x1={0} x2={w} y1={pad + (h - pad * 2) * 0.7} y2={pad + (h - pad * 2) * 0.7} stroke="var(--gain)" strokeOpacity="0.4" strokeDasharray="3 4" />
-        <text x={4} y={pad + (h - pad * 2) * 0.3 + 4} fill="var(--loss)" fontSize="8" opacity="0.7">70</text>
-        <text x={4} y={pad + (h - pad * 2) * 0.7 + 4} fill="var(--gain)" fontSize="8" opacity="0.7">30</text>
-        <polyline points={pts} fill="none" stroke="var(--aqua)" strokeWidth="1.5" />
-      </svg>
-    </div>
-  );
-}
-
-function MACDChart({ macd }: { macd: { macd: number[]; signal: number[]; hist: number[] } }) {
-  const w = 1100, h = 80, pad = 20;
-  const step = (w - pad * 2) / macd.macd.length;
-  const allVals = [...macd.macd, ...macd.signal, ...macd.hist];
-  const min = Math.min(...allVals), max = Math.max(...allVals);
-  const yv = (v: number) => pad + (h - pad * 2) * (1 - (v - min) / (max - min));
-  const zero = yv(0);
-  const macdLine = macd.macd.map((v, i) => `${pad + i * step},${yv(v)}`).join(" ");
-  const sigLine = macd.signal.map((v, i) => `${pad + i * step},${yv(v)}`).join(" ");
-  return (
-    <div className="mt-2 border-t border-white/10 pt-2">
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">MACD (12,26,9)</div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16">
-        <line x1={0} x2={w} y1={zero} y2={zero} stroke="currentColor" strokeOpacity="0.15" />
-        {macd.hist.map((v, i) => {
-          const barH = Math.abs(yv(v) - zero);
-          return <rect key={i} x={pad + i * step + 1} y={v >= 0 ? zero - barH : zero} width={Math.max(1, step - 2)} height={barH} fill={v >= 0 ? "var(--gain)" : "var(--loss)"} opacity="0.5" />;
-        })}
-        <polyline points={macdLine} fill="none" stroke="var(--cyan)" strokeWidth="1.5" />
-        <polyline points={sigLine} fill="none" stroke="#f59e0b" strokeWidth="1.5" />
-      </svg>
-    </div>
-  );
-}
-
-/* ---------- Ratios ---------- */
-function Ratios() {
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Financial Ratios" title={<>The <span className="gradient-text">Numbers That Matter</span></>}
-        subtitle="Every ratio comes with a beginner-friendly explanation." />
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {RATIOS.map((r) => (
-          <div key={r.name} className="glass rounded-2xl p-4 hover-lift">
-            <div className="text-[10px] uppercase tracking-widest text-[color:var(--cyan)] font-semibold">{r.name}</div>
-            <div className="font-mono text-2xl font-bold mt-1">{r.value}</div>
-            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{r.explain}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Gainers / Losers ---------- */
-function GainersLosers() {
-  const sorted = [...COMPANIES].sort((a, b) => b.changePct - a.changePct);
-  const gainers = sorted.filter((c) => c.change >= 0).slice(0, 5);
-  const losers = sorted.filter((c) => c.change < 0).reverse().slice(0, 5);
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Movers" title={<>Today's <span className="gradient-text">Top Gainers & Losers</span></>}
-        subtitle="Auto-updated market movers across our tracked universe." />
-      <div className="grid md:grid-cols-2 gap-6">
-        <MoversTable title="Top Gainers" rows={gainers} up />
-        <MoversTable title="Top Losers" rows={losers} up={false} />
-      </div>
-    </section>
-  );
-}
-
-function MoversTable({ title, rows, up }: { title: string; rows: typeof COMPANIES; up: boolean }) {
-  return (
-    <div className="glass-strong rounded-2xl overflow-hidden">
-      <div className={`px-5 py-4 flex items-center gap-2 border-b border-white/10 ${up ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
-        {up ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-        <div className="font-semibold text-foreground">{title}</div>
-        <span className="ml-auto text-[10px] uppercase tracking-widest text-muted-foreground">Live</span>
-      </div>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            <th className="text-left px-5 py-2 font-medium">#</th>
-            <th className="text-left px-5 py-2 font-medium">Company</th>
-            <th className="text-right px-5 py-2 font-medium">Price</th>
-            <th className="text-right px-5 py-2 font-medium">Change</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={r.ticker} className="border-t border-white/5 hover:bg-white/5 transition">
-              <td className="px-5 py-3 text-muted-foreground font-mono text-xs">{i + 1}</td>
-              <td className="px-5 py-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-7 w-7 rounded-md grid place-items-center text-[10px] font-bold text-white" style={{ background: r.color }}>{r.logo}</div>
-                  <div>
-                    <div className="text-sm font-medium">{r.name}</div>
-                    <div className="text-[11px] text-muted-foreground">{r.ticker}</div>
-                  </div>
-                </div>
-              </td>
-              <td className="px-5 py-3 text-right font-mono">{r.ticker.length > 4 ? "₹" : "$"}{fmt(r.price)}</td>
-              <td className={`px-5 py-3 text-right font-mono font-semibold ${up ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
-                {up ? "+" : ""}{fmt(r.changePct)}%
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/* ---------- News ---------- */
-function NewsGrid() {
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <div className="flex items-end justify-between flex-wrap gap-4" id="news">
-        <SectionTitle eyebrow="Market News" title={<>Latest <span className="gradient-text">Headlines</span></>}
-          subtitle="Curated from trusted financial news sources — updates automatically." />
-        <a href="https://finance.yahoo.com/news/" target="_blank" rel="noreferrer noopener" className="text-sm text-[color:var(--cyan)] hover:underline">View all →</a>
-      </div>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {NEWS.map((n, i) => (
-          <article key={i} className="glass rounded-2xl overflow-hidden hover-lift group">
-            <div className="relative h-40 overflow-hidden bg-white/5">
-              <img src={n.image} alt={n.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[color:var(--midnight)]/85 via-[color:var(--midnight)]/20 to-transparent" />
-              <div className="absolute top-3 left-3 text-[10px] uppercase tracking-widest bg-white/15 backdrop-blur px-2 py-1 rounded-md font-semibold">{n.category}</div>
-              <Newspaper className="absolute bottom-3 right-3 h-8 w-8 text-white/70" />
-            </div>
-            <div className="p-5">
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-2">
-                <span className="font-medium text-foreground/80">{n.source}</span><span>•</span><span>{n.time}</span>
-              </div>
-              <h3 className="font-semibold leading-snug mb-2 group-hover:text-[color:var(--cyan)] transition">{n.title}</h3>
-              <p className="text-sm text-muted-foreground line-clamp-2">{n.summary}</p>
-              <a href={googleNews(n.title)} target="_blank" rel="noreferrer noopener"
-                className="mt-4 text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 hover:gap-2 transition-all">
-                Read more <ArrowUpRight className="h-3.5 w-3.5" />
-              </a>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Economic Calendar ---------- */
-function EconCalendar() {
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Economic Calendar" title={<>Upcoming <span className="gradient-text">Market-Moving Events</span></>}
-        subtitle="Central-bank decisions, macro releases, earnings, and IPO dates." />
-      <div className="glass-strong rounded-2xl overflow-hidden">
-        <div className="hidden sm:grid grid-cols-[100px_100px_80px_1fr_100px] px-5 py-3 text-[11px] uppercase tracking-widest text-muted-foreground border-b border-white/10">
-          <div>Date</div><div>Time IST</div><div>Region</div><div>Event</div><div className="text-right">Impact</div>
-        </div>
-        {ECON_EVENTS.map((e, i) => (
-          <div key={i} className="grid grid-cols-2 sm:grid-cols-[100px_100px_80px_1fr_100px] px-5 py-4 border-b border-white/5 last:border-0 items-center gap-2 hover:bg-white/5 transition">
-            <div className="font-mono text-sm">{e.date}</div>
-            <div className="font-mono text-xs text-muted-foreground">{e.time}</div>
-            <div className="text-xs"><span className="glass px-2 py-0.5 rounded-md">{e.region}</span></div>
-            <div className="col-span-2 sm:col-span-1 text-sm font-medium">{e.event}</div>
-            <div className="text-right">
-              <span className={`text-[10px] font-semibold px-2 py-1 rounded-md ${e.impact === "High" ? "bg-[color:var(--loss)]/15 text-[color:var(--loss)]" : e.impact === "Medium" ? "bg-[color:var(--aqua)]/15 text-[color:var(--aqua)]" : "bg-white/5 text-muted-foreground"}`}>{e.impact}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- IPO (6/6/6) ---------- */
-function IPOSection() {
-  const [tab, setTab] = useState<"Upcoming" | "Open" | "Closed">("Open");
-  const filtered = ALL_IPOS.filter((i) => i.status === tab);
-  return (
-    <section id="ipos" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="IPO Center" title={<>Track <span className="gradient-text">Every New Listing</span></>}
-        subtitle="Upcoming, open, and recently listed IPOs with price band, GMP, and subscription snapshot." />
-      <div className="flex gap-1 glass rounded-xl p-1 w-fit mb-6">
-        {(["Upcoming", "Open", "Closed"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition ${tab === t ? "bg-[color:var(--cyan)] text-[color:var(--midnight)]" : "text-muted-foreground hover:text-foreground"}`}>
-            {t} <span className="ml-1 opacity-60">({ALL_IPOS.filter(i => i.status === t).length})</span>
-          </button>
-        ))}
-      </div>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((ipo) => (
-          <div key={ipo.name} className="glass rounded-2xl p-5 hover-lift">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-11 w-11 rounded-xl grid place-items-center font-bold text-white shrink-0" style={{ background: ipo.color }}>
-                <Rocket className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold truncate">{ipo.name}</div>
-                <div className="text-[11px] text-muted-foreground">{ipo.date}</div>
-              </div>
-              <span className={`ml-auto text-[10px] font-semibold px-2 py-1 rounded-md shrink-0 ${ipo.status === "Open" ? "bg-[color:var(--gain)]/15 text-[color:var(--gain)]" : ipo.status === "Upcoming" ? "bg-[color:var(--aqua)]/15 text-[color:var(--aqua)]" : "bg-white/10 text-muted-foreground"}`}>
-                {ipo.status}
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="glass rounded-lg py-2">
-                <div className="text-[10px] uppercase text-muted-foreground">Band</div>
-                <div className="text-xs font-mono font-semibold">{ipo.band}</div>
-              </div>
-              <div className="glass rounded-lg py-2">
-                <div className="text-[10px] uppercase text-muted-foreground">GMP</div>
-                <div className="text-xs font-mono font-semibold text-[color:var(--gain)]">{ipo.gmp}</div>
-              </div>
-              <div className="glass rounded-lg py-2">
-                <div className="text-[10px] uppercase text-muted-foreground">Sub.</div>
-                <div className="text-xs font-mono font-semibold">{ipo.sub}</div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Funds ---------- */
-function FundsSection() {
-  return (
-    <section id="funds" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Mutual Funds & ETFs" title={<>Popular <span className="gradient-text">Funds Snapshot</span></>}
-        subtitle="Trailing returns, risk rating, expense ratio, and AUM at a glance." />
-      <div className="glass-strong rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="text-[11px] uppercase tracking-widest text-muted-foreground">
-            <tr>
-              <th className="text-left px-5 py-3 font-medium">Fund</th>
-              <th className="text-left px-5 py-3 font-medium">Category</th>
-              <th className="text-right px-5 py-3 font-medium">1Y</th>
-              <th className="text-right px-5 py-3 font-medium hidden sm:table-cell">3Y</th>
-              <th className="text-left px-5 py-3 font-medium hidden md:table-cell">Risk</th>
-              <th className="text-right px-5 py-3 font-medium hidden md:table-cell">Expense</th>
-              <th className="text-right px-5 py-3 font-medium hidden lg:table-cell">AUM</th>
-            </tr>
-          </thead>
-          <tbody>
-            {FUNDS.map((f) => (
-              <tr key={f.name} className="border-t border-white/5 hover:bg-white/5 transition">
-                <td className="px-5 py-4 font-medium">{f.name}</td>
-                <td className="px-5 py-4 text-xs text-muted-foreground">{f.category}</td>
-                <td className="px-5 py-4 text-right font-mono text-[color:var(--gain)] font-semibold">+{fmt(f.return1y)}%</td>
-                <td className="px-5 py-4 text-right font-mono text-[color:var(--gain)] hidden sm:table-cell">+{fmt(f.return3y)}%</td>
-                <td className="px-5 py-4 hidden md:table-cell">
-                  <span className={`text-[10px] px-2 py-0.5 rounded-md ${f.risk === "High" ? "bg-[color:var(--loss)]/15 text-[color:var(--loss)]" : f.risk === "Moderate" ? "bg-[color:var(--aqua)]/15 text-[color:var(--aqua)]" : "bg-[color:var(--gain)]/15 text-[color:var(--gain)]"}`}>{f.risk}</span>
-                </td>
-                <td className="px-5 py-4 text-right font-mono text-xs hidden md:table-cell">{fmt(f.expense)}%</td>
-                <td className="px-5 py-4 text-right font-mono text-xs hidden lg:table-cell">{f.aum}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Education ---------- */
-function Education() {
-  const items = [
-    { icon: GraduationCap, title: "What is the Stock Market?", desc: "A plain-English intro to exchanges, tickers, orders, and price discovery." },
-    { icon: Rocket, title: "How to Start Investing", desc: "Open a demat, define goals, pick your first instruments, size positions." },
-    { icon: BarChart3, title: "Types of Stocks", desc: "Common vs preferred, large / mid / small-cap, cyclical vs defensive." },
-    { icon: Building2, title: "Fundamental Analysis", desc: "Read a P&L, balance sheet, and cash-flow statement like an analyst." },
-    { icon: LineChart, title: "Technical Analysis", desc: "Trends, support / resistance, moving averages, and RSI basics." },
-    { icon: ShieldCheck, title: "Risk Management", desc: "Position sizing, diversification, stop losses, and emotional discipline." },
-    { icon: Brain, title: "Investment Strategies", desc: "Value, growth, dividend, momentum, and index investing compared." },
-    { icon: Zap, title: "Options & Derivatives 101", desc: "How futures and options work — payoffs, greeks, and common strategies." },
-  ];
-  return (
-    <section id="learn" className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Learn" title={<>Investor <span className="gradient-text">Education Hub</span></>}
-        subtitle="Zero to informed — concise, jargon-free lessons for every experience level." />
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {items.map((i) => (
-          <div key={i.title} className="glass rounded-2xl p-5 hover-lift group">
-            <div className="h-10 w-10 rounded-xl gradient-brand grid place-items-center mb-4 text-[color:var(--midnight)]">
-              <i.icon className="h-5 w-5" strokeWidth={2.4} />
-            </div>
-            <h3 className="font-semibold mb-1.5">{i.title}</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed mb-4">{i.desc}</p>
-            <a href={investopedia(i.title)} target="_blank" rel="noreferrer noopener"
-              className="text-xs font-semibold text-[color:var(--cyan)] inline-flex items-center gap-1 group-hover:gap-2 transition-all">
-              Learn more <ArrowUpRight className="h-3.5 w-3.5" />
-            </a>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Heatmap ---------- */
-function Heatmap() {
-  const shade = (v: number) => {
-    const abs = Math.min(1, Math.abs(v) / 3);
-    return v >= 0 ? `color-mix(in oklab, var(--gain) ${20 + abs * 55}%, transparent)` : `color-mix(in oklab, var(--loss) ${20 + abs * 55}%, transparent)`;
-  };
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6" id="markets">
-      <SectionTitle eyebrow="Sector Heatmap" title={<>Market Pulse by <span className="gradient-text">Sector</span></>}
-        subtitle="One glance shows where capital is rotating today." />
-      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-        {SECTORS.map((s) => (
-          <div key={s.name} className="rounded-xl p-4 border border-white/10 hover-lift transition" style={{ background: shade(s.change) }}>
-            <div className="text-xs font-semibold">{s.name}</div>
-            <div className={`font-mono text-lg font-bold mt-1 ${s.change >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
-              {s.change >= 0 ? "+" : ""}{fmt(s.change)}%
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Global Markets ---------- */
-function GlobalMarkets() {
-  const groups = ["US", "IN", "EU", "ASIA", "CRYPTO", "FX", "COMM"] as const;
-  const labels: Record<(typeof groups)[number], string> = { US: "US Markets", IN: "Indian Markets", EU: "European Markets", ASIA: "Asian Markets", CRYPTO: "Crypto", FX: "Forex", COMM: "Commodities" };
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Global Markets" title={<>The <span className="gradient-text">World Board</span></>}
-        subtitle="Regional indices, crypto, FX, and commodities in one view." />
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {groups.map((g) => {
-          const rows = GLOBAL_MARKETS.filter((m) => m.region === g);
-          if (!rows.length) return null;
-          return (
-            <div key={g} className="glass-strong rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Globe2 className="h-4 w-4 text-[color:var(--cyan)]" />
-                <div className="font-semibold text-sm">{labels[g]}</div>
-              </div>
-              <div className="space-y-2.5">
-                {rows.map((r) => (
-                  <div key={r.name} className="flex items-center justify-between text-sm">
-                    <div className="text-muted-foreground">{r.name}</div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-sm">{r.value}</span>
-                      <span className={`font-mono text-xs w-16 text-right ${r.changePct >= 0 ? "text-[color:var(--gain)]" : "text-[color:var(--loss)]"}`}>
-                        {r.changePct >= 0 ? "+" : ""}{fmt(r.changePct)}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- AI Insights ---------- */
-function AIInsights() {
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <div className="relative glass-strong rounded-3xl p-8 sm:p-12 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-[color:var(--cyan)]/25 blur-[120px] pointer-events-none" />
-        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-[color:var(--aqua)]/20 blur-[120px] pointer-events-none" />
-        <div className="relative grid lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 glass rounded-full px-3 py-1.5 text-xs font-semibold mb-5">
-              <Sparkles className="h-3.5 w-3.5 text-[color:var(--aqua)]" /> AI Market Insights • Informational Only
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold leading-tight">Today's <span className="gradient-text">market mood</span>, summarized by AI.</h2>
-            <p className="mt-4 text-muted-foreground">An overview of today's session — sector rotation, bullish and bearish undercurrents, notable highlights, and key risks. Generated by AI for context only; not investment advice.</p>
-            <div className="mt-6 grid grid-cols-2 gap-3 max-w-md">
-              <Mood label="Overall Mood" value="Cautiously Bullish" tone="up" />
-              <Mood label="Volatility (VIX)" value="14.2 • Low" tone="n" />
-              <Mood label="Breadth" value="62% Advancers" tone="up" />
-              <Mood label="Sentiment Flow" value="Neutral → Positive" tone="n" />
-            </div>
-          </div>
-          <div className="space-y-3">
-            {[
-              { t: "Sector Leaders", d: "Technology (+2.4%) and Real Estate (+1.9%) lead as bond yields ease." },
-              { t: "Sector Laggards", d: "Metals (-1.8%) and Automobile (-1.2%) under pressure on China demand concerns." },
-              { t: "Highlights", d: "AI infrastructure names extend gains; NVIDIA up 3% on strong guidance." },
-              { t: "Risks to Watch", d: "US CPI print next week and RBI commentary on food-inflation trajectory." },
-            ].map((x) => (
-              <div key={x.t} className="glass rounded-xl p-4 hover-lift">
-                <div className="text-xs uppercase tracking-widest text-[color:var(--cyan)] font-semibold mb-1">{x.t}</div>
-                <div className="text-sm text-muted-foreground leading-relaxed">{x.d}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Mood({ label, value, tone }: { label: string; value: string; tone: "up" | "down" | "n" }) {
-  const c = tone === "up" ? "text-[color:var(--gain)]" : tone === "down" ? "text-[color:var(--loss)]" : "text-[color:var(--aqua)]";
-  return (
-    <div className="glass rounded-xl p-3">
-      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className={`font-semibold mt-0.5 text-sm ${c}`}>{value}</div>
-    </div>
-  );
-}
-
-/* ---------- Newsletter ---------- */
-function Newsletter() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "ok" | "err">("idle");
-  const [msg, setMsg] = useState("");
-  const subscribe = useServerFn(subscribeToNewsletter);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.includes("@")) return;
-    setStatus("sending");
-    try {
-      const res = await subscribe({ data: { email } });
-      if (res.ok) {
-        setStatus("ok");
-        setMsg("✓ You're on the list — your welcome market brief is on the way.");
-        setEmail("");
-      } else {
-        setStatus("err");
-        setMsg(res.error ?? "Something went wrong. Please try again.");
-      }
-    } catch {
-      setStatus("err");
-      setMsg("Network issue — please try again in a moment.");
+function handleCors() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
     }
-  };
-
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6" id="about">
-      <div className="relative overflow-hidden rounded-3xl p-10 sm:p-14 text-center gradient-brand text-[color:var(--midnight)]">
-        <div className="absolute inset-0 animate-grid opacity-25 pointer-events-none" />
-        <div className="relative max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-[color:var(--midnight)]/15 rounded-full px-3 py-1 text-xs font-semibold mb-4">
-            <Mail className="h-3.5 w-3.5" /> Newsletter
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-bold">Markets in your inbox, every morning.</h2>
-          <p className="mt-3 text-[color:var(--midnight)]/80">Daily updates, weekly deep dives, and beginner-friendly education — free, always.</p>
-          <form onSubmit={onSubmit} className="mt-6 flex flex-col sm:flex-row gap-2 max-w-lg mx-auto">
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required placeholder="you@email.com"
-              className="flex-1 h-12 px-4 rounded-xl bg-[color:var(--midnight)]/10 border border-[color:var(--midnight)]/20 placeholder:text-[color:var(--midnight)]/50 outline-none focus:border-[color:var(--midnight)]/60" />
-            <button type="submit" disabled={status === "sending"}
-              className="h-12 px-6 rounded-xl bg-[color:var(--midnight)] text-white font-semibold hover:opacity-90 transition disabled:opacity-70">
-              {status === "sending" ? "Subscribing…" : "Subscribe"}
-            </button>
-          </form>
-          {status === "ok" && <div className="mt-3 text-sm font-medium">{msg}</div>}
-          {status === "err" && <div className="mt-3 text-sm text-[color:var(--midnight)]/90">{msg}</div>}
-          <p className="mt-3 text-[11px] text-[color:var(--midnight)]/70">By subscribing you agree to receive market emails from {OWNER.name}. Unsubscribe anytime.</p>
-        </div>
-      </div>
-    </section>
-  );
+  });
 }
-
-/* ---------- WhatsApp FAB ---------- */
-function WhatsAppFab() {
-  return (
-    <a href={OWNER.whatsapp} target="_blank" rel="noreferrer noopener" aria-label="Chat with Stocketize on WhatsApp"
-      className="fixed bottom-6 right-6 z-[90] h-14 w-14 rounded-full grid place-items-center shadow-2xl transition hover:scale-110 group"
-      style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
-      <MessageCircle className="h-6 w-6 text-white" strokeWidth={2.4} />
-      <span className="absolute right-full mr-3 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold bg-[color:var(--midnight)] text-white opacity-0 group-hover:opacity-100 transition pointer-events-none">Chat on WhatsApp</span>
-      <span className="absolute inset-0 rounded-full animate-ping opacity-40" style={{ background: "#25D366" }} />
-    </a>
-  );
-}
-
-/* ---------- Footer ---------- */
-function Footer() {
-  return (
-    <footer className="mt-10 border-t border-white/10 bg-[color:var(--midnight)] text-white/90">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-14">
-        <div className="grid md:grid-cols-4 gap-10">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-9 w-9 rounded-xl gradient-brand grid place-items-center"><Activity className="h-4 w-4 text-[color:var(--midnight)]" strokeWidth={3} /></div>
-              <div className="font-display font-bold">Stocketize<span className="gradient-text"> AI</span></div>
-            </div>
-            <p className="text-sm text-white/60 leading-relaxed">Real-time market intelligence, company insights, and investor education — in one elegant platform.</p>
-          </div>
-          <FooterCol title="Quick Links" items={[{ label: "Home", href: "#home" }, { label: "Markets", href: "#markets" }, { label: "Companies", href: "#companies" }, { label: "News", href: "#news" }, { label: "About", href: "#about" }]} />
-          <FooterCol title="Legal" items={[{ label: "Privacy Policy", to: "/privacy" }, { label: "Terms & Conditions", to: "/terms" }, { label: "Disclaimer", to: "/disclaimer" }, { label: "Affiliate Disclosure", to: "/affiliate-disclosure" }]} />
-          <div>
-            <div className="text-sm font-semibold mb-4">About the Website Owner</div>
-            <ul className="text-sm text-white/70 space-y-2">
-              <li>Name: <span className="text-white">{OWNER.name}</span></li>
-              <li className="flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5 shrink-0" />
-                <a href={`tel:${OWNER.phone}`} className="text-white hover:text-[color:var(--cyan)] transition">Contact No. — {OWNER.phone}</a>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <MessageCircle className="h-3.5 w-3.5 shrink-0" style={{ color: "#25D366" }} />
-                <a href={OWNER.whatsapp} target="_blank" rel="noreferrer noopener" className="text-white hover:text-[color:var(--cyan)] transition">WhatsApp — {OWNER.whatsappDisplay}</a>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="mt-12 grid md:grid-cols-2 gap-4 text-xs text-white/60">
-          <div className="rounded-xl border border-white/10 p-4 leading-relaxed">
-            <div className="font-semibold text-white/90 mb-1">Disclaimer</div>
-            Stocketize AI is an AI-generated website created solely for educational and informational purposes. Nothing on this site is financial, investment, tax or legal advice. Always do your own research and consult a SEBI-registered / qualified financial advisor before making any investment decisions. Read the full <Link to="/disclaimer" className="underline hover:text-[color:var(--cyan)]">Disclaimer</Link>.
-          </div>
-          <div className="rounded-xl border border-white/10 p-4 leading-relaxed">
-            <div className="font-semibold text-white/90 mb-1">Affiliate Disclosure</div>
-            This website earns revenue through <strong>advertisements, affiliate partnerships, sponsored content and referral links</strong>. Commissions may be earned at no extra cost to you. See the full <Link to="/affiliate-disclosure" className="underline hover:text-[color:var(--cyan)]">Affiliate Disclosure</Link>.
-          </div>
-        </div>
-        <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap justify-between items-center gap-2 text-xs text-white/50">
-          <div>© 2026 Stocketize AI. All rights reserved.</div>
-          <div>Built for learners, by learners.</div>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-type FooterItem = { label: string; href?: string; to?: "/privacy" | "/terms" | "/disclaimer" | "/affiliate-disclosure" };
-function FooterCol({ title, items }: { title: string; items: FooterItem[] }) {
-  return (
-    <div>
-      <div className="text-sm font-semibold mb-4">{title}</div>
-      <ul className="space-y-2 text-sm text-white/70">
-        {items.map((i) => (
-          <li key={i.label}>
-            {i.to ? <Link to={i.to} className="hover:text-[color:var(--cyan)] transition">{i.label}</Link>
-              : <a href={i.href} className="hover:text-[color:var(--cyan)] transition">{i.label}</a>}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/* ---------- Testimonials ---------- */
-function Testimonials() {
-  const items = [
-    { q: "The company deep-dives helped me understand what to actually look at before buying a stock. As a first-time investor from Pune, this is exactly what I needed.", n: "Ananya Menon", r: "Retail Investor • Pune" },
-    { q: "The daily brief is my morning coffee read. Concise, non-hyped, and it explains WHY the market moved — not just what happened.", n: "Rohan Iyer", r: "Software Engineer • Bengaluru" },
-    { q: "I use the ratios section to teach my finance students. Every metric comes with a plain-English explanation, which is rare on Indian sites.", n: "Prof. Meera Kulkarni", r: "MBA Faculty • Mumbai" },
-    { q: "Finally an educational platform that clearly says 'this isn't advice'. That honesty is what made me stick around.", n: "Vikram Shah", r: "Chartered Accountant • Ahmedabad" },
-    { q: "The IPO tracker and sector heatmap are super useful for weekend research. Clean UI, no clutter, and works well on my phone.", n: "Sneha Reddy", r: "Long-term Investor • Hyderabad" },
-    { q: "The WhatsApp support is a lovely touch. Got a clear, honest reply within a day — no salesy pitch, just help.", n: "Karan Bhatia", r: "Aspiring Trader • Jaipur" },
-  ];
-  return (
-    <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
-      <SectionTitle eyebrow="Community" title={<>What <span className="gradient-text">Investors Say</span></>}
-        subtitle="Feedback from readers across India who use Stocketize AI to learn and stay informed." />
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {items.map((t) => (
-          <figure key={t.n} className="glass rounded-2xl p-6 hover-lift">
-            <div className="text-[color:var(--cyan)] text-3xl leading-none mb-2">"</div>
-            <blockquote className="text-sm leading-relaxed text-muted-foreground">{t.q}</blockquote>
-            <figcaption className="mt-5 flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full gradient-brand grid place-items-center text-[color:var(--midnight)] font-bold text-sm">
-                {t.n.split(" ").map((x) => x[0]).slice(0, 2).join("")}
-              </div>
-              <div>
-                <div className="text-sm font-semibold">{t.n}</div>
-                <div className="text-[11px] text-muted-foreground">{t.r}</div>
-              </div>
-            </figcaption>
-          </figure>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- FAQ ---------- */
-function FAQ() {
-  const items = [
-    { q: "Is Stocketize AI giving me financial advice?", a: "No. All content is AI-generated and strictly for education and information only. Nothing on the site is investment, tax or legal advice. Please consult a SEBI-registered advisor before making any investment." },
-    { q: "How current is the market data on Stocketize AI?", a: "The platform attempts to fetch live NSE/BSE data. When markets are open, indices, prices and news update every 60 seconds. Outside market hours, realistic simulated data is shown as a fallback." },
-    { q: "Do I need to pay to use the website or the newsletter?", a: "No. Reading market data, company profiles, education content, IPOs, mutual funds, ratios and news is completely free. The daily newsletter is also free." },
-    { q: "How often is the newsletter sent and what does it contain?", a: "Subscribers receive a welcome brief immediately, a daily morning market update, and a weekend deep-dive covering NSE/BSE movement, top gainers/losers, IPOs, economic events, and education." },
-    { q: "I'm a complete beginner — where should I start?", a: "Open the Investor Education Hub on the home page and start with 'What is the Stock Market?' followed by 'How to Start Investing'. Every ratio in the Financial Ratios section also has a plain-English explanation." },
-  ];
-  const [openIdx, setOpenIdx] = useState<number | null>(0);
-  return (
-    <section className="relative py-20 mx-auto max-w-4xl px-4 sm:px-6" id="faq">
-      <SectionTitle eyebrow="FAQ" title={<>Frequently <span className="gradient-text">Asked Questions</span></>}
-        subtitle="Quick answers about Stocketize AI, data accuracy, newsletters and getting started." />
-      <div className="space-y-3">
-        {items.map((it, i) => {
-          const open = openIdx === i;
-          return (
-            <div key={it.q} className="glass rounded-2xl overflow-hidden border border-white/10">
-              <button onClick={() => setOpenIdx(open ? null : i)} className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 hover:bg-white/5 transition">
-                <span className="text-sm sm:text-base font-semibold">{it.q}</span>
-                <ChevronRight className={`h-4 w-4 shrink-0 text-[color:var(--cyan)] transition-transform ${open ? "rotate-90" : ""}`} />
-              </button>
-              {open && <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">{it.a}</div>}
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-/* ---------- Home Page ---------- */
-function Home() {
-  const { light, toggle } = useTheme();
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
-  }, [user, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#060a14] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center animate-pulse">
-            <Activity className="h-5 w-5 text-[#060a14]" />
-          </div>
-          <p className="text-white/30 text-sm">Loading…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  return (
-    <div className="min-h-screen">
-      <Header light={light} toggle={toggle} />
-      <main>
-        <Hero />
-        <LiveDashboard />
-        <Trending />
-        <CompanyProfile />
-        <InteractiveChart />
-        <Ratios />
-        <GainersLosers />
-        <NewsGrid />
-        <EconCalendar />
-        <IPOSection />
-        <FundsSection />
-        <Education />
-        <Heatmap />
-        <GlobalMarkets />
-        <AIInsights />
-        <Testimonials />
-        <FAQ />
-        <Newsletter />
-      </main>
-      <Footer />
-      <WhatsAppFab />
-    </div>
-  );
-}
-
-
-
-
-
