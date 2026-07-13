@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // ==========================================
-// TYPES & INTERFACES
+// DATA MODEL INTERFACES
 // ==========================================
-interface StockData {
+interface MarketTick {
   time: string;
   open: number;
   high: number;
@@ -14,369 +14,367 @@ interface StockData {
   macd: number;
 }
 
-interface IPOItem {
+interface IPOData {
   id: string;
   companyName: string;
-  ticker: string;
-  expectedDate: string;
+  symbol: string;
+  date: string;
   priceRange: string;
-  status: 'Upcoming' | 'Open' | 'Closed';
+  status: 'Open' | 'Upcoming' | 'Closed';
 }
 
 // ==========================================
-// DATA GENERATORS
+// INITIAL GENERATOR SEEDS
 // ==========================================
-const generateInitialData = (): StockData[] => {
-  const data: StockData[] = [];
-  let basePrice = 150;
+const createInitialHistory = (): MarketTick[] => {
+  const data: MarketTick[] = [];
+  let currentPrice = 240.50;
   const now = new Date();
-  for (let i = 40; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 60000);
-    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const change = (Math.random() - 0.5) * 4;
-    const open = basePrice;
-    const close = basePrice + change;
+  
+  for (let i = 45; i >= 0; i--) {
+    const tickTime = new Date(now.getTime() - i * 60000);
+    const timeString = tickTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const drift = (Math.random() - 0.5) * 4;
+    
+    const open = currentPrice;
+    const close = currentPrice + drift;
     const high = Math.max(open, close) + Math.random() * 2;
     const low = Math.min(open, close) - Math.random() * 2;
     
     data.push({
-      time: timeStr,
+      time: timeString,
       open,
       high,
       low,
       close,
-      ma: basePrice + (Math.random() - 0.5) * 2,
+      ma: currentPrice + (Math.random() - 0.5) * 1.5,
       rsi: 30 + Math.random() * 40,
-      macd: (Math.random() - 0.5) * 6
+      macd: (Math.random() - 0.5) * 4
     });
-    basePrice = close;
+    currentPrice = close;
   }
   return data;
 };
 
-const initialIPOs: IPOItem[] = [
-  { id: '1', companyName: 'TechNova Global', ticker: 'TNVA', expectedDate: '2026-07-20', priceRange: '$45 - $50', status: 'Open' },
-  { id: '2', companyName: 'GreenEnergy Pulse', ticker: 'GEPL', expectedDate: '2026-07-28', priceRange: '$18 - $22', status: 'Upcoming' },
-  { id: '3', companyName: 'Apex Quantum Analytics', ticker: 'AQAN', expectedDate: '2026-08-05', priceRange: '$105 - $110', status: 'Upcoming' },
+const initialIPOs: IPOData[] = [
+  { id: '1', companyName: 'Quantum Dynamics Ltd', symbol: 'QDL', date: '2026-08-18', priceRange: '₹340 - ₹365', status: 'Open' },
+  { id: '2', companyName: 'BioHelix Pharmaceuticals', symbol: 'BHP', date: '2026-08-27', priceRange: '₹120 - ₹135', status: 'Upcoming' },
+  { id: '3', companyName: 'Vortex Grid Infrastructure', symbol: 'VGI', date: '2026-09-05', priceRange: '₹890 - ₹920', status: 'Upcoming' }
 ];
 
-export default function MarketCompass() {
-  // ==========================================
-  // STATE MANAGEMENT
-  // ==========================================
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [authEmail, setAuthEmail] = useState<string>('');
-  const [authPassword, setAuthPassword] = useState<string>('');
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+export default function MarketCompassTerminal() {
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [emailInput, setEmailInput] = useState<string>('');
+  const [passkeyInput, setPasskeyInput] = useState<string>('');
 
-  const [marketData, setMarketData] = useState<StockData[]>(generateInitialData());
-  const [selectedTicker, setSelectedTicker] = useState<string>('AAPL');
+  // Live Market State
+  const [marketFeed, setMarketFeed] = useState<MarketTick[]>(createInitialHistory());
+  const [selectedAsset, setSelectedAsset] = useState<string>('NIFTY50');
   
+  // Indicator Overlay Switchers
+  const [showMA, setShowMA] = useState<boolean>(true);
   const [showRSI, setShowRSI] = useState<boolean>(true);
   const [showMACD, setShowMACD] = useState<boolean>(true);
-  const [showMA, setShowMA] = useState<boolean>(true);
 
+  // Newsletter Toggle Pipeline
   const [newsletterEmail, setNewsletterEmail] = useState<string>('');
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false);
-  const [newsletterStatus, setNewsletterStatus] = useState<string>('');
+  const [statusMessage, setStatusMessage] = useState<string>('');
 
-  const [ipos] = useState<IPOItem[]>(initialIPOs);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement | null>(null);
 
   // ==========================================
-  // LIVE FEED SIMULATION (Updates every 2 seconds)
+  // REAL-TIME FEED LOOP (Updates every 2 seconds)
   // ==========================================
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMarketData((prevData) => {
-        if (!prevData || prevData.length === 0) return generateInitialData();
-        const nextData = [...prevData];
-        const lastBar = nextData[nextData.length - 1];
+    const loop = setInterval(() => {
+      setMarketFeed((prevFeed) => {
+        if (!prevFeed || prevFeed.length === 0) return createInitialHistory();
+        const nextFeed = [...prevFeed];
+        const lastTick = nextFeed[nextFeed.length - 1];
         
-        const change = (Math.random() - 0.5) * 2;
-        const newClose = lastBar.close + change;
-        const newHigh = Math.max(lastBar.high, newClose);
-        const newLow = Math.min(lastBar.low, newClose);
+        const delta = (Math.random() - 0.5) * 2.5;
+        const nextClose = lastTick.close + delta;
+        const nextHigh = Math.max(lastTick.high, nextClose);
+        const nextLow = Math.min(lastTick.low, nextClose);
         
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const clock = new Date();
+        const timeStr = clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-        nextData.shift();
-        nextData.push({
+        nextFeed.shift();
+        nextFeed.push({
           time: timeStr,
-          open: lastBar.close,
-          high: newHigh,
-          low: newLow,
-          close: newClose,
-          ma: newClose + (Math.random() - 0.5) * 1.5,
-          rsi: Math.max(10, Math.min(90, lastBar.rsi + (Math.random() - 0.5) * 10)),
-          macd: Math.max(-10, Math.min(10, lastBar.macd + (Math.random() - 0.5) * 2))
+          open: lastTick.close,
+          high: nextHigh,
+          low: nextLow,
+          close: nextClose,
+          ma: nextClose + (Math.random() - 0.5) * 1.2,
+          rsi: Math.max(10, Math.min(90, lastTick.rsi + (Math.random() - 0.5) * 6)),
+          macd: Math.max(-6, Math.min(6, lastTick.macd + (Math.random() - 0.5) * 1.2))
         });
-        return nextData;
+        return nextFeed;
       });
     }, 2000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(loop);
   }, []);
 
   // ==========================================
-  // CANVAS RENDERING ENGINE (Overlays charts safely)
+  // RE-RENDERING ENGINE (Canvas Indicator Integration)
   // ==========================================
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || marketData.length === 0) return;
+    const container = chartContainerRef.current;
+    if (!canvas || !container || marketFeed.length === 0) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear Canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const width = container.clientWidth;
+    const height = 340;
+    canvas.width = width;
+    canvas.height = height;
 
-    const padding = 40;
-    const chartWidth = canvas.width - padding * 2;
-    const chartHeight = canvas.height - padding * 2;
-    const barCount = marketData.length;
-    const barWidth = chartWidth / barCount;
+    ctx.clearRect(0, 0, width, height);
 
-    // Find Price Bounds
-    const prices = marketData.flatMap(d => [d.high, d.low, d.ma]);
-    const maxPrice = Math.max(...prices) * 1.02;
-    const minPrice = Math.min(...prices) * 0.98;
-    const priceRange = maxPrice - minPrice;
+    const pad = 40;
+    const renderW = width - pad * 2;
+    const renderH = height - pad * 2;
+    const sliceW = renderW / marketFeed.length;
 
-    // Helper to map Price to Y Coordinate
-    const getY = (val: number) => canvas.height - padding - ((val - minPrice) / priceRange) * chartHeight;
+    // Find Price Bounds for Dynamic Scaling
+    const allPrices = marketFeed.flatMap(t => [t.high, t.low, t.ma]);
+    const ceiling = Math.max(...allPrices) * 1.01;
+    const floor = Math.min(...allPrices) * 0.99;
+    const range = ceiling - floor;
 
-    // Draw Grid Lines
+    const scaleY = (val: number) => height - pad - ((val - floor) / range) * renderH;
+
+    // Draw Gridlines
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
-      const y = padding + (chartHeight / 4) * i;
+      const y = pad + (renderH / 4) * i;
       ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(canvas.width - padding, y);
+      ctx.moveTo(pad, y);
+      ctx.lineTo(width - pad, y);
       ctx.stroke();
     }
 
-    // Loop data to draw candlesticks and indicator lines
-    marketData.forEach((d, i) => {
-      const x = padding + i * barWidth + barWidth / 2;
-      const isUp = d.close >= d.open;
+    // Draw Primary Candlesticks
+    marketFeed.forEach((tick, idx) => {
+      const x = pad + idx * sliceW + sliceW / 2;
+      const greenTrend = tick.close >= tick.open;
 
-      // Draw Candlestick Wick
-      ctx.strokeStyle = isUp ? '#10b981' : '#f43f5e';
+      ctx.strokeStyle = greenTrend ? '#10b981' : '#f43f5e';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(x, getY(d.high));
-      ctx.lineTo(x, getY(d.low));
+      ctx.moveTo(x, scaleY(tick.high));
+      ctx.lineTo(x, scaleY(tick.low));
       ctx.stroke();
 
-      // Draw Candlestick Body
-      ctx.fillStyle = isUp ? '#10b981' : '#f43f5e';
-      const bodyTop = getY(Math.max(d.open, d.close));
-      const bodyBottom = getY(Math.min(d.open, d.close));
-      ctx.fillRect(x - barWidth * 0.3, bodyTop, barWidth * 0.6, Math.max(2, bodyBottom - bodyTop));
+      ctx.fillStyle = greenTrend ? '#10b981' : '#f43f5e';
+      const top = scaleY(Math.max(tick.open, tick.close));
+      const bottom = scaleY(Math.min(tick.open, tick.close));
+      ctx.fillRect(x - sliceW * 0.3, top, sliceW * 0.6, Math.max(2, bottom - top));
     });
 
-    // OVERLAY: Moving Average (Gold Line)
+    // OVERLAY: Moving Average Line (Gold)
     if (showMA) {
-      ctx.strokeStyle = '#f59e0b';
+      ctx.strokeStyle = '#eab308';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      marketData.forEach((d, i) => {
-        const x = padding + i * barWidth + barWidth / 2;
-        if (i === 0) ctx.moveTo(x, getY(d.ma));
-        else ctx.lineTo(x, getY(d.ma));
+      marketFeed.forEach((tick, idx) => {
+        const x = pad + idx * sliceW + sliceW / 2;
+        if (idx === 0) ctx.moveTo(x, scaleY(tick.ma));
+        else ctx.lineTo(x, scaleY(tick.ma));
       });
       ctx.stroke();
     }
 
-    // OVERLAY: RSI Normalization Layer (Purple Line)
+    // OVERLAY: RSI Direct Normalization (Purple Line)
     if (showRSI) {
       ctx.strokeStyle = '#a855f7';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      marketData.forEach((d, i) => {
-        const x = padding + i * barWidth + barWidth / 2;
-        // Map 0-100 RSI values directly into the visual heights of the canvas
-        const rsiY = canvas.height - padding - (d.rsi / 100) * chartHeight;
-        if (i === 0) ctx.moveTo(x, rsiY);
+      marketFeed.forEach((tick, idx) => {
+        const x = pad + idx * sliceW + sliceW / 2;
+        const rsiY = height - pad - (tick.rsi / 100) * renderH;
+        if (idx === 0) ctx.moveTo(x, rsiY);
         else ctx.lineTo(x, rsiY);
       });
       ctx.stroke();
     }
 
-    // OVERLAY: MACD Normalization Layer (Cyan Line)
+    // OVERLAY: MACD Direct Normalization (Cyan Line)
     if (showMACD) {
       ctx.strokeStyle = '#06b6d4';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      marketData.forEach((d, i) => {
-        const x = padding + i * barWidth + barWidth / 2;
-        // Normalize MACD scale (-10 to +10) into visual center
-        const macdY = canvas.height - padding - ((d.macd + 10) / 20) * chartHeight;
-        if (i === 0) ctx.moveTo(x, macdY);
+      marketFeed.forEach((tick, idx) => {
+        const x = pad + idx * sliceW + sliceW / 2;
+        const macdY = height - pad - ((tick.macd + 6) / 12) * renderH;
+        if (idx === 0) ctx.moveTo(x, macdY);
         else ctx.lineTo(x, macdY);
       });
       ctx.stroke();
     }
-
-  }, [marketData, showMA, showRSI, showMACD]);
+  }, [marketFeed, showMA, showRSI, showMACD]);
 
   // ==========================================
-  // EVENT HANDLERS
+  // FORM & EVENT HANDLERS
   // ==========================================
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const executeAuthentication = (e: React.FormEvent) => {
     e.preventDefault();
-    if (authEmail && authPassword) {
-      setIsLoggedIn(true);
+    if (emailInput.trim() && passkeyInput.trim()) {
+      setIsAuthenticated(true);
     }
   };
 
   const handleNewsletterToggle = (e: React.FormEvent) => {
     e.preventDefault();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const validatePattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
-    if (!emailRegex.test(newsletterEmail)) {
-      setNewsletterStatus('Please write a valid email address.');
+    if (!validatePattern.test(newsletterEmail)) {
+      setStatusMessage('Error: Please write a valid email address.');
       return;
     }
 
     if (!isSubscribed) {
       setIsSubscribed(true);
-      setNewsletterStatus(`Success! A live newsletter update has been sent to ${newsletterEmail}`);
+      setStatusMessage(`Subscription confirmed! Live market data report has been sent to ${newsletterEmail}`);
     } else {
       setIsSubscribed(false);
-      setNewsletterStatus('Unsubscribed from the market update mailing stream.');
+      setStatusMessage('Unsubscribed. Updates paused successfully.');
       setNewsletterEmail('');
     }
   };
 
-  const latest = marketData[marketData.length - 1] || { close: 0, ma: 0, rsi: 0, macd: 0 };
+  const currentTick = marketFeed[marketFeed.length - 1] || { close: 0, ma: 0, rsi: 0, macd: 0 };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans p-4 md:p-8 space-y-8">
-      {/* HEADER NAVBAR */}
+      {/* HEADER NAVIGATION TERMINAL */}
       <header className="flex flex-col sm:flex-row justify-between items-center bg-slate-950 p-6 rounded-2xl border border-slate-800 gap-4">
-        <h1 className="text-xl font-black tracking-wider text-emerald-400">MARKET COMPASS TERMINAL</h1>
-        <div className="flex items-center space-x-4">
-          {isLoggedIn ? (
-            <span className="text-xs font-mono text-emerald-400 bg-emerald-950 border border-emerald-900 px-3 py-1 rounded-full">
-              Connected: {authEmail}
+        <h1 className="text-lg font-black tracking-widest text-emerald-400">MARKET COMPASS TERMINAL</h1>
+        <div>
+          {isAuthenticated ? (
+            <span className="text-xs font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-900 px-3 py-1.5 rounded-lg">
+              Session Live: {emailInput}
             </span>
           ) : (
-            <span className="text-xs font-mono text-rose-400 bg-rose-950 border border-rose-900 px-3 py-1 rounded-full">
-              Offline Terminal Mode
+            <span className="text-xs font-mono text-rose-400 bg-rose-950 border border-rose-900 px-3 py-1.5 rounded-lg">
+              Offline Workspace Node
             </span>
           )}
         </div>
       </header>
 
-      {/* AUTH WINDOW */}
-      {!isLoggedIn && (
-        <div className="max-w-md mx-auto bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl">
-          <h2 className="text-lg font-bold text-center mb-4 uppercase tracking-wide">Secure Node Authentication</h2>
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
+      {/* AUTH MATRIX PANEL */}
+      {!isAuthenticated && (
+        <div className="max-w-md mx-auto bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <div className="text-center">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">Terminal Credentials Required</h2>
+          </div>
+          <form onSubmit={executeAuthentication} className="space-y-3">
             <input 
               type="email" 
-              placeholder="System Email" 
+              placeholder="Operator Email Address" 
               required
-              value={authEmail} 
-              onChange={(e) => setAuthEmail(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
+              value={emailInput} 
+              onChange={(e) => setEmailInput(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
             />
             <input 
               type="password" 
-              placeholder="Passkey Token" 
+              placeholder="Security Key Entry" 
               required
-              value={authPassword} 
-              onChange={(e) => setAuthPassword(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500"
+              value={passkeyInput} 
+              onChange={(e) => setPasskeyInput(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
             />
-            <button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2 rounded-lg transition text-sm uppercase">
-              Establish Session
+            <button type="submit" className="w-full bg-emerald-400 hover:bg-emerald-500 text-slate-950 font-bold py-2 rounded-lg transition text-xs uppercase tracking-wide">
+              Validate Terminal Node
             </button>
           </form>
         </div>
       )}
 
-      {/* MAIN CONTAINER PANELS */}
+      {/* WORKBENCH DASHBOARD CONTENT */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* CHART WORKBENCH */}
+        {/* CHART GRID DISPLAY */}
         <div className="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <select 
-                value={selectedTicker} 
-                onChange={(e) => setSelectedTicker(e.target.value)}
-                className="bg-slate-900 border border-slate-700 text-lg font-bold px-3 py-1 rounded-lg focus:outline-none text-emerald-400 font-mono"
+                value={selectedAsset} 
+                onChange={(e) => setSelectedAsset(e.target.value)}
+                className="bg-slate-900 border border-slate-700 text-xs font-bold px-3 py-1.5 rounded-lg focus:outline-none text-emerald-400 font-mono"
               >
-                <option value="AAPL">AAPL (Apple Inc.)</option>
-                <option value="TSLA">TSLA (Tesla Inc.)</option>
-                <option value="NVDA">NVDA (NVIDIA Corp.)</option>
+                <option value="NIFTY50">NIFTY 50 (NSE INDEX)</option>
+                <option value="SENSEX">SENSEX (BSE INDEX)</option>
+                <option value="RELIANCE">RELIANCE IND</option>
               </select>
-              <div className="text-3xl font-black font-mono mt-1">${latest.close.toFixed(2)}</div>
+              <div className="text-3xl font-black font-mono mt-1 text-slate-100">₹{currentTick.close.toFixed(2)}</div>
             </div>
 
-            {/* DIRECT CANVAS OVERLAY CONTROLS */}
+            {/* DIRECT LAYERING FILTER TOGGLES */}
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setShowMA(!showMA)} className={`text-xs px-3 py-1.5 rounded-lg border transition font-mono ${showMA ? 'bg-amber-500/20 text-amber-400 border-amber-500' : 'bg-slate-900 text-slate-600 border-slate-800'}`}>
-                MA (Gold)
+              <button onClick={() => setShowMA(!showMA)} className={`text-xs px-2.5 py-1.5 rounded-lg border transition font-mono ${showMA ? 'bg-amber-500/20 text-amber-400 border-amber-500' : 'bg-slate-900 text-slate-600 border-slate-800'}`}>
+                MA Overlay
               </button>
-              <button onClick={() => setShowRSI(!showRSI)} className={`text-xs px-3 py-1.5 rounded-lg border transition font-mono ${showRSI ? 'bg-purple-500/20 text-purple-400 border-purple-500' : 'bg-slate-900 text-slate-600 border-slate-800'}`}>
-                RSI (Purple)
+              <button onClick={() => setShowRSI(!showRSI)} className={`text-xs px-2.5 py-1.5 rounded-lg border transition font-mono ${showRSI ? 'bg-purple-500/20 text-purple-400 border-purple-500' : 'bg-slate-900 text-slate-600 border-slate-800'}`}>
+                RSI Charted
               </button>
-              <button onClick={() => setShowMACD(!showMACD)} className={`text-xs px-3 py-1.5 rounded-lg border transition font-mono ${showMACD ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-slate-900 text-slate-600 border-slate-800'}`}>
-                MACD (Cyan)
+              <button onClick={() => setShowMACD(!showMACD)} className={`text-xs px-2.5 py-1.5 rounded-lg border transition font-mono ${showMACD ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500' : 'bg-slate-900 text-slate-600 border-slate-800'}`}>
+                MACD Vector
               </button>
             </div>
           </div>
 
-          {/* TIME-FRAME CANVAS TARGET */}
-          <div className="relative bg-slate-900 rounded-xl p-2 border border-slate-800 overflow-hidden">
-            <div className="absolute top-2 left-4 z-10 flex gap-4 text-[10px] font-mono">
-              {showMA && <span className="text-amber-400">MA: ${latest.ma.toFixed(2)}</span>}
-              {showRSI && <span className="text-purple-400">RSI: {latest.rsi.toFixed(1)}%</span>}
-              {showMACD && <span className="text-cyan-400">MACD: {latest.macd.toFixed(2)}</span>}
+          {/* RENDERING WRAPPER ZONE */}
+          <div ref={chartContainerRef} className="relative bg-slate-900 rounded-xl p-2 border border-slate-800 w-full overflow-hidden">
+            <div className="absolute top-3 left-4 z-10 flex gap-4 text-[10px] font-mono bg-slate-950/90 px-2 py-0.5 rounded border border-slate-800">
+              {showMA && <span className="text-amber-400">MA: ₹{currentTick.ma.toFixed(2)}</span>}
+              {showRSI && <span className="text-purple-400">RSI: {currentTick.rsi.toFixed(1)}%</span>}
+              {showMACD && <span className="text-cyan-400">MACD: {currentTick.macd.toFixed(2)}</span>}
             </div>
-            <canvas 
-              ref={canvasRef} 
-              width={700} 
-              height={320} 
-              className="w-full h-auto block"
-            />
+            <canvas ref={canvasRef} className="w-full block" />
           </div>
         </div>
 
-        {/* IPO DATA MODULE */}
+        {/* IPO MODULE BOX */}
         <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
-          <div>
-            <h3 className="text-lg font-bold mb-4 tracking-wider text-slate-300">🚀 LIVE IPO TRACKER</h3>
-            <div className="space-y-3">
-              {ipos.map((ipo) => (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold tracking-widest text-slate-300 uppercase">🚀 IPO Live Tracker</h3>
+            <div className="space-y-2">
+              {initialIPOs.map((ipo) => (
                 <div key={ipo.id} className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center text-xs">
                   <div>
                     <div className="font-bold text-slate-200">{ipo.companyName}</div>
-                    <div className="font-mono text-slate-500 mt-0.5">{ipo.ticker} • {ipo.priceRange}</div>
+                    <div className="font-mono text-slate-500 text-[10px] mt-0.5">{ipo.symbol} • Range: {ipo.priceRange}</div>
                   </div>
-                  <span className={`px-2 py-0.5 font-mono text-[10px] font-bold rounded-full ${ipo.status === 'Open' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
+                  <span className={`px-2 py-0.5 font-mono text-[9px] font-bold rounded ${ipo.status === 'Open' ? 'bg-emerald-950 text-emerald-400 border border-emerald-900' : 'bg-amber-950 text-amber-400 border border-amber-900'}`}>
                     {ipo.status}
                   </span>
                 </div>
               ))}
             </div>
           </div>
-          <div className="text-[10px] text-slate-600 font-mono text-center mt-4">Automated SEC Engine Sync Active</div>
+          <div className="text-[10px] text-slate-600 font-mono text-center pt-2">Datafeed Stream Synchronized</div>
         </div>
       </div>
 
-      {/* INTERACTIVE NEWSLETTER FORM */}
+      {/* REACTION NEWSLETTER COMPONENT */}
       <section className="bg-gradient-to-r from-slate-950 to-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
-          <h3 className="text-md font-bold mb-1">📰 Automated Live Feed Subscriber</h3>
-          <p className="text-xs text-slate-400">Get technical updates and tracking indicators synchronized straight to your email terminal.</p>
+          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wide">📰 Live Market Report Terminal</h3>
+          <p className="text-xs text-slate-400 mt-1">Pipe your streaming metrics, active indicators, and charts to your mailing setup.</p>
         </div>
 
-        <div className="w-full md:w-auto min-w-[300px]">
+        <div className="w-full md:w-auto min-w-[310px]">
           <form onSubmit={handleNewsletterToggle} className="flex gap-2">
             <input 
               type="email" 
@@ -384,8 +382,8 @@ export default function MarketCompass() {
               disabled={isSubscribed}
               value={newsletterEmail}
               onChange={(e) => setNewsletterEmail(e.target.value)}
-              className="bg-slate-950 border border-slate-700 text-slate-100 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 flex-grow disabled:opacity-50"
-              placeholder="terminal@domain.com"
+              className="bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 flex-grow disabled:opacity-40"
+              placeholder="operator@domain.com"
             />
             <button 
               type="submit" 
@@ -396,8 +394,8 @@ export default function MarketCompass() {
               {isSubscribed ? 'Unsubscribe' : 'Subscribe'}
             </button>
           </form>
-          {newsletterStatus && (
-            <p className="text-[10px] font-mono mt-2 text-amber-400">{newsletterStatus}</p>
+          {statusMessage && (
+            <p className="text-[10px] font-mono mt-2 text-amber-400">{statusMessage}</p>
           )}
         </div>
       </section>
