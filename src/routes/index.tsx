@@ -152,16 +152,17 @@ function SmartSearch() {
     const term = q.trim().toLowerCase();
     if (!term) return [];
     const hits: Hit[] = [];
-    COMPANIES.forEach(c => {
-      if (c.name.toLowerCase().includes(term)||c.ticker.toLowerCase().includes(term)||c.sector.toLowerCase().includes(term))
-        hits.push({ label:c.name, sub:`${c.ticker} • ${c.sector}`, type:"Company", href:"/#companies" });
+   COMPANIES?.forEach(c => {
+  if (c?.name?.toLowerCase().includes(term) || c?.ticker?.toLowerCase().includes(term) || c?.sector?.toLowerCase().includes(term))
+    hits.push({ label: c.name || "", sub: `${c.ticker || ""} • ${c.sector || ""}`, type: "Company", href: "/#companies" });
     });
-    SECTORS.forEach(s => {
-      if (s.name.toLowerCase().includes(term)) hits.push({ label:s.name, sub:"Sector heatmap", type:"Sector", href:"/#markets" });
+   SECTORS?.forEach(s => {
+  if (s?.name?.toLowerCase().includes(term)) 
+    hits.push({ label: s.name || "", sub: "Sector heatmap", type: "Sector", href: "/#markets" });
     });
-    NEWS.forEach(n => {
-      if (n.title.toLowerCase().includes(term)||n.category.toLowerCase().includes(term))
-        hits.push({ label:n.title, sub:`${n.source} • ${n.category}`, type:"News", href:googleNews(n.title), external:true });
+    NEWS?.forEach(n => {
+  if (n?.title?.toLowerCase().includes(term) || n?.category?.toLowerCase().includes(term))
+    hits.push({ label: n.title || "", sub: `${n.source || ""} • ${n.category || ""}`, type: "News", href: googleNews(n.title || ""), external: true });
     });
     ALL_IPOS.forEach(i => {
       if (i.name.toLowerCase().includes(term)) hits.push({ label:i.name, sub:`IPO • ${i.status}`, type:"IPO", href:"/#ipos" });
