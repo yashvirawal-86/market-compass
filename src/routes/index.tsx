@@ -9,7 +9,7 @@ import {
   ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart, LogOut,
   CheckCircle2, BellOff,
 } from "lucide-react";
-
+import { COMPANIES, SECTORS, NEWS, ALL_IPOS, FUNDS, RATIOS } from "@/lib/market-data";
 const OWNER = {
   name: "Yashvi Rawal",
   email: "yashvirawal86@gmail.com",
