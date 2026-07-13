@@ -152,29 +152,29 @@ function SmartSearch() {
     const term = q.trim().toLowerCase();
     if (!term) return [];
     const hits: Hit[] = [];
-   COMPANIES?.forEach(c => {
-  if (c?.name?.toLowerCase().includes(term) || c?.ticker?.toLowerCase().includes(term) || c?.sector?.toLowerCase().includes(term))
-    hits.push({ label: c.name || "", sub: `${c.ticker || ""} • ${c.sector || ""}`, type: "Company", href: "/#companies" });
-    });
-   SECTORS?.forEach(s => {
-  if (s?.name?.toLowerCase().includes(term)) 
-    hits.push({ label: s.name || "", sub: "Sector heatmap", type: "Sector", href: "/#markets" });
-    });
-    NEWS?.forEach(n => {
-  if (n?.title?.toLowerCase().includes(term) || n?.category?.toLowerCase().includes(term))
-    hits.push({ label: n.title || "", sub: `${n.source || ""} • ${n.category || ""}`, type: "News", href: googleNews(n.title || ""), external: true });
-    });
-    ALL_IPOS.forEach(i => {
-      if (i.name.toLowerCase().includes(term)) hits.push({ label:i.name, sub:`IPO • ${i.status}`, type:"IPO", href:"/#ipos" });
-    });
-    FUNDS.forEach(f => {
-      if (f.name.toLowerCase().includes(term)||f.category.toLowerCase().includes(term))
-        hits.push({ label:f.name, sub:`Fund • ${f.category}`, type:"Fund", href:"/#funds" });
-    });
-    RATIOS.forEach(r => {
-      if (r.name.toLowerCase().includes(term)||r.explain.toLowerCase().includes(term))
-        hits.push({ label:r.name, sub:"Financial ratio", type:"Learn", href:investopedia(r.name), external:true });
-    });
+ COMPANIES?.forEach(c => {
+    if (c?.name?.toLowerCase().includes(term)||c?.ticker?.toLowerCase().includes(term)||c?.sector?.toLowerCase().includes(term))
+      hits.push({ label:c.name || "", sub:`${c.ticker || ""} • ${c.sector || ""}`, type:"Company", href:"/#companies" });
+  });
+  SECTORS?.forEach(s => {
+    if (s?.name?.toLowerCase().includes(term)) hits.push({ label:s.name || "", sub:"Sector heatmap", type:"Sector", href:"/#markets" });
+  });
+  NEWS?.forEach(n => {
+    if (n?.title?.toLowerCase().includes(term)||n?.category?.toLowerCase().includes(term))
+      hits.push({ label:n.title || "", sub:`${n.source || ""} • ${n.category || ""}`, type:"News", href:googleNews(n.title || ""), external:true });
+  });
+  ALL_IPOS?.forEach(i => {
+    if (i?.name?.toLowerCase().includes(term)||i?.ticker?.toLowerCase().includes(term))
+      hits.push({ label:i.name || "", sub:`${i.ticker || ""} • Upcoming IPO`, type:"IPO", href:"/#ipos" });
+  });
+  FUNDS?.forEach(f => {
+    if (f?.name?.toLowerCase().includes(term)||f?.ticker?.toLowerCase().includes(term))
+      hits.push({ label:f.name || "", sub:`${f.ticker || ""} • Mutual Fund`, type:"Fund", href:"/#funds" });
+  });
+  RATIOS?.forEach(r => {
+    if (r?.name?.toLowerCase().includes(term))
+      hits.push({ label:r.name || "", sub:"Financial Ratio", type:"Ratio", href:"/#ratios" });
+  });
     return hits.slice(0,8);
   },[q]);
   return (
