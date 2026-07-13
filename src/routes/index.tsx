@@ -9,7 +9,7 @@ import {
   ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart, LogOut,
   CheckCircle2, BellOff,
 } from "lucide-react";
-import { COMPANIES, SECTORS, NEWS, ALL_IPOS, FUNDS, RATIOS } from "@/lib/market-data";
+import { COMPANIES_DATA, SECTORS_DATA, NEWS_DATA, ALL_IPOS_DATA, FUNDS_DATA, RATIOS_DATA } from "@/lib/market-data";
 const OWNER = {
   name: "Yashvi Rawal",
   email: "yashvirawal86@gmail.com",
@@ -152,26 +152,26 @@ function SmartSearch() {
     const term = q.trim().toLowerCase();
     if (!term) return [];
     const hits: Hit[] = [];
- COMPANIES?.forEach(c => {
+COMPANIES_DATA?.forEach(c => {
     if (c?.name?.toLowerCase().includes(term)||c?.ticker?.toLowerCase().includes(term)||c?.sector?.toLowerCase().includes(term))
       hits.push({ label:c.name || "", sub:`${c.ticker || ""} • ${c.sector || ""}`, type:"Company", href:"/#companies" });
   });
-  SECTORS?.forEach(s => {
+  SECTORS_DATA?.forEach(s => {
     if (s?.name?.toLowerCase().includes(term)) hits.push({ label:s.name || "", sub:"Sector heatmap", type:"Sector", href:"/#markets" });
   });
-  NEWS?.forEach(n => {
+  NEWS_DATA?.forEach(n => {
     if (n?.title?.toLowerCase().includes(term)||n?.category?.toLowerCase().includes(term))
       hits.push({ label:n.title || "", sub:`${n.source || ""} • ${n.category || ""}`, type:"News", href:googleNews(n.title || ""), external:true });
   });
-  ALL_IPOS?.forEach(i => {
+  ALL_IPOS_DATA?.forEach(i => {
     if (i?.name?.toLowerCase().includes(term)||i?.ticker?.toLowerCase().includes(term))
       hits.push({ label:i.name || "", sub:`${i.ticker || ""} • Upcoming IPO`, type:"IPO", href:"/#ipos" });
   });
-  FUNDS?.forEach(f => {
+  FUNDS_DATA?.forEach(f => {
     if (f?.name?.toLowerCase().includes(term)||f?.ticker?.toLowerCase().includes(term))
       hits.push({ label:f.name || "", sub:`${f.ticker || ""} • Mutual Fund`, type:"Fund", href:"/#funds" });
   });
-  RATIOS?.forEach(r => {
+  RATIOS_DATA?.forEach(r => {
     if (r?.name?.toLowerCase().includes(term))
       hits.push({ label:r.name || "", sub:"Financial Ratio", type:"Ratio", href:"/#ratios" });
   });
@@ -510,7 +510,7 @@ function CompanyProfile() {
     if (exchange==="BSE") return c.exchange==="BSE"||c.exchange==="BOTH";
     return true;
   });
-  const [active, setActive] = useState(COMPANIES[0]);
+  const [active, setActive] = useState(COMPANIES_DATA?.[0] || null);
   useEffect(()=>{ if (!filtered.find(c=>c.ticker===active.ticker)&&filtered[0]) setActive(filtered[0]); },[exchange]);
   return (
     <section className="relative py-20 mx-auto max-w-7xl px-4 sm:px-6">
