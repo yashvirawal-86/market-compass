@@ -28,8 +28,8 @@ const investopedia = (q: string) => `https://www.investopedia.com/search?q=${enc
 
 import { Sparkline, fmt } from "@/components/sparkline";
 import {
-  COMPANIES_DATA, SECTORS_DATA, NEWS_DATA, ALL_IPOS_DATA, FUNDS_DATA, RATIOS_DATA,
   MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
+  COMPANIES_DATA, SECTORS_DATA, NEWS_DATA, ALL_IPOS_DATA, FUNDS_DATA, RATIOS_DATA,
   type Shareholder,
 } from "@/lib/market-data";
 import { subscribeToNewsletter } from "@/lib/newsletter.functions";
