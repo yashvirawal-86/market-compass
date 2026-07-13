@@ -1,3 +1,4 @@
+'use server';
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
@@ -14,14 +15,12 @@ export const subscribeToNewsletter = createServerFn({ method: "POST" })
     const supabase = createClient(url, key, {
       auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
     });
-
     const { error } = await supabase
       .from("newsletter_subscribers")
       .insert({ email: data.email, source: "website" });
-
-    // Treat duplicate email as success (already subscribed).
     if (error && !error.message.toLowerCase().includes("duplicate")) {
       return { ok: false as const, error: "Could not subscribe. Please try again." };
     }
     return { ok: true as const };
   });
+ 
