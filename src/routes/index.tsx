@@ -22,9 +22,9 @@ const OWNER = {
   phone: "9550541145",
 };
 
-const yahooQuote = (t: string) => `https://finance.yahoo.com/quote/${encodeURIComponent(t.replace(/\./g,"-"))}`;
-const googleNews = (q: string) => `https://www.google.com/search?tbm=nws&q=${encodeURIComponent(q)}`;
-const investopedia = (q: string) => `https://www.investopedia.com/search?q=${encodeURIComponent(q)}`;
+const yahooQuote = (t: string) => `https://finance.yahoo.com/quote/${encodeURIComponent((t || "").replace(/\./g,"-"))}`;
+const googleNews = (q: string) => `https://www.google.com/search?tbm=nws&q=${encodeURIComponent(q || "")}`;
+const investopedia = (q: string) => `https://www.investopedia.com/search?q=${encodeURIComponent(q || "")}`;
 
 import { Sparkline, fmt } from "@/components/sparkline";
 import {
