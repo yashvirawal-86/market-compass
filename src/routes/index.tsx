@@ -9,7 +9,7 @@ import {
   ShieldCheck, Zap, ChevronRight, LayoutDashboard, Building2, AreaChart, LogOut,
   CheckCircle2, BellOff,
 } from "lucide-react";
-import { COMPANIES_DATA, SECTORS_DATA, NEWS_DATA, ALL_IPOS_DATA, FUNDS_DATA, RATIOS_DATA } from "@/lib/market-data";
+
 const OWNER = {
   name: "Yashvi Rawal",
   email: "yashvirawal86@gmail.com",
@@ -28,6 +28,7 @@ const investopedia = (q: string) => `https://www.investopedia.com/search?q=${enc
 
 import { Sparkline, fmt } from "@/components/sparkline";
 import {
+  COMPANIES_DATA, SECTORS_DATA, NEWS_DATA, ALL_IPOS_DATA, FUNDS_DATA, RATIOS_DATA,
   MARKET_INDICES, COMPANIES, NEWS, ECON_EVENTS, FUNDS, SECTORS, RATIOS, GLOBAL_MARKETS,
   type Shareholder,
 } from "@/lib/market-data";
