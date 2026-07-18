@@ -1,4 +1,7 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// Force rebuild
-export default defineConfig({});
+export default defineConfig({
+  server: {
+    handler: "./src/server.ts",
+  },
+});
