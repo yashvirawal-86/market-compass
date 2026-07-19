@@ -8,7 +8,7 @@ const emailSchema = z.object({
 });
 
 export const subscribeToNewsletter = createServerFn({ method: "POST" })
-  .inputValidator((data: { email: string }) => emailSchema.parse(data))
+  .validator((data: { email: string }) => emailSchema.parse(data))
   .handler(async ({ data }) => {
 const url = process.env.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "";
 const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY ?? "";
