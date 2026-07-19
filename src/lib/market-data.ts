@@ -470,3 +470,10 @@ export const GLOBAL_MARKETS: GlobalMarket[] = [
   { region: "COMM", name: "Copper", value: "$4.18/lb", changePct: 0.9 },
   { region: "COMM", name: "Natural Gas", value: "$3.42/MMBtu", changePct: -1.4 },
 ];
+// Aliases for search functionality
+export const COMPANIES_DATA = COMPANIES;
+export const SECTORS_DATA = SECTORS;
+export const NEWS_DATA = NEWS;
+export const ALL_IPOS_DATA = IPOS;
+export const FUNDS_DATA = FUNDS;
+export const RATIOS_DATA = RATIOS;
