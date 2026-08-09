@@ -474,6 +474,6 @@ export const GLOBAL_MARKETS: GlobalMarket[] = [
 export const COMPANIES_DATA = COMPANIES;
 export const SECTORS_DATA = SECTORS;
 export const NEWS_DATA = NEWS;
-export const ALL_IPOS_DATA = IPOS;
+export const ALL_IPOS_DATA: unknown[] = [];
 export const FUNDS_DATA = FUNDS;
 export const RATIOS_DATA = RATIOS;
